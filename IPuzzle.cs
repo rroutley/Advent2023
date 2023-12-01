@@ -1,0 +1,3 @@
+interface IPuzzle{
+    void Excute();
+}
