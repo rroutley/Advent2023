@@ -1,4 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 class Puzzle3 : IPuzzle
 {
@@ -15,6 +17,15 @@ class Puzzle3 : IPuzzle
             System.Console.WriteLine(entry);
         }
 
+        int total = Part1(lines, entries);
+        System.Console.WriteLine("Answer = {0}", total);
+
+        total = Part2(lines, entries);
+        System.Console.WriteLine("Answer = {0}", total);
+    }
+
+    private static int Part1(string[] lines, IEnumerable<Entry> entries)
+    {
         HashSet<Entry> parts = new HashSet<Entry>();
 
         int l = 0;
@@ -47,10 +58,37 @@ class Puzzle3 : IPuzzle
             total += part.Value;
         }
 
-        System.Console.WriteLine("Answer = {0}", total);
-
+        return total;
     }
 
+
+    private static int Part2(string[] lines, IEnumerable<Entry> entries)
+    {
+        var total = 0;
+
+        int l = 0;
+        foreach (var line in lines)
+        {
+            for (int i = 0; i < line.Length; i++)
+            {
+                var c = line[i];
+                if (c == '*')
+                {
+                    System.Console.WriteLine($"{c} @ ({i},{l})");
+                    var adjacent = entries.Where(entry => entry.IsAdjacentTo(i, l)).ToList();
+
+                    if (adjacent.Count == 2)
+                    {
+                        adjacent.ForEach(Console.WriteLine);
+                        total += adjacent[0].Value * adjacent[1].Value;
+                    }
+                }
+            }
+            l++;
+        }
+
+        return total;
+    }
     private IEnumerable<Entry> FindAllNumbers(string[] lines)
     {
         int l = 0;
