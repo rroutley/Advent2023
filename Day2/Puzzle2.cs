@@ -11,7 +11,7 @@ class Puzzle2 : IPuzzle
         List<Game> games = new List<Game>();
 
         var lines = File.ReadAllLines("Day2/input.txt");
-        //lines = sample.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        //var lines = sample.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
         {
             var game = Game.Parse(line);
@@ -35,8 +35,26 @@ class Puzzle2 : IPuzzle
             }
         }
 
-        System.Console.WriteLine($"Answer = {total}");
+        System.Console.WriteLine($"Answer Part 1 = {total}");
+
+        total = 0;
+        foreach (var game in games)
+        {
+
+            Play min = game.Minima();
+            {
+                int power = min.Red * min.Green * min.Blue;
+                System.Console.WriteLine("{0}, {1}, {2}", game.Number, min, power);
+
+                total += power;
+
+            }
+        }
+
+        System.Console.WriteLine($"Answer Part 2 = {total}");
+
     }
+
 
 
 
@@ -96,6 +114,18 @@ class Puzzle2 : IPuzzle
         internal bool IsPossible(Play actual)
         {
             return Plays.All(p => p.Red <= actual.Red && p.Green <= actual.Green && p.Blue <= actual.Blue);
+        }
+
+        internal Play Minima()
+        {
+            int r = 0, g = 0, b = 0;
+            foreach (var p in Plays)
+            {
+                r = Math.Max(r, p.Red);
+                g = Math.Max(g, p.Green);
+                b = Math.Max(b, p.Blue);
+            }
+            return (r, g, b);
         }
     };
 
