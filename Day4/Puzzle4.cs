@@ -1,4 +1,6 @@
 
+using System.Security.Cryptography.X509Certificates;
+
 class Puzzle4 : IPuzzle
 {
 
@@ -6,21 +8,43 @@ class Puzzle4 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day4/input.txt");
-        // var lines = sample.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        //var lines = sample.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-
-        int total = 0;
+        var cards = new List<Card>();
         foreach (var line in lines)
         {
             var card = Card.Parse(line);
+            cards.Add(card);
+        }
+
+        int total = 0;
+        foreach (var card in cards)
+        {
             //System.Console.WriteLine(card);
             var m = card.Matches();
-            System.Console.WriteLine($"card {card.Number} = {m}");
+            // System.Console.WriteLine($"card {card.Number} = {m}");
             if (m > 0)
                 total += 1 << (m - 1);
         }
 
         System.Console.WriteLine("Answer = {0}", total);
+        var x = cards.Count;
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            var card = cards[i];
+            var m = card.Matches();
+
+            for (int j = 0; j < m; j++)
+            {
+                cards.Add(cards[card.Number + j]);
+
+            }
+
+        }
+
+
+        System.Console.WriteLine("Part 2 = {0}", cards.Count);
     }
 
 
