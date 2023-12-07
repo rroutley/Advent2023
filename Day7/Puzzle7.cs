@@ -67,7 +67,10 @@ class Puzzle7 : IPuzzle
 
     record Hand(char[] Cards)
     {
-        //    internal static readonly List<char> Ordering = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+        // Part 1 Ordering
+        // internal static readonly List<char> Ordering = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+
+        // Part 2 Ordering
         internal static readonly List<char> Ordering = ['J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A'];
         public override string ToString()
         {
@@ -85,33 +88,35 @@ class Puzzle7 : IPuzzle
             FiveOfAKind,
         }
 
-        private Type? mStrength;
+        private Type? _strength;
 
         public Type Strength()
         {
-            if (mStrength.HasValue)
-                return mStrength.Value;
+            _strength ??= RecursiveStrength(Cards, 0);
 
-            var maxStrength = RecursiveStrength(Cards);
-
-            mStrength = maxStrength;
-            return maxStrength;
+            return _strength.Value;
         }
 
-        private Type RecursiveStrength(char[] cards)
+        private Type RecursiveStrength(char[] cards, int start)
         {
             var maxStrength = Strength(cards);
-            for (int i = 0; i < 5; i++)
+            // Part 1
+            //return maxStrength;  
+
+            for (int i = start; i < 5; i++)
             {
                 if (cards[i] == 'J')
                 {
+                    var cardsClone = new char[5];
+                    cards.CopyTo(cardsClone, 0);
+
+                    // replace J (= Joker) with ever other possible card and see if this improves the strength of the hand
+                    // j=0 case not needed as this the ordering of the Joker card.
                     for (int j = 1; j < Ordering.Count; j++)
                     {
-                        var c = new char[5];
-                        cards.CopyTo(c, 0);
-                        c[i] = Ordering[j];
+                        cardsClone[i] = Ordering[j];
 
-                        var strength = RecursiveStrength(c);
+                        var strength = RecursiveStrength(cardsClone, start + 1);
                         if (strength > maxStrength)
                         {
                             maxStrength = strength;
