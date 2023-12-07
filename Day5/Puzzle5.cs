@@ -7,10 +7,16 @@ class Puzzle5 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day5/input.txt");
-        //var lines = sample.Replace("\n", "").Split(new char[] { '\r' });
+        //        lines = sample.Replace("\n", "").Split(new char[] { '\r' });
 
         (var seeds, var maps) = ParseLines(lines);
+        Part1(seeds, maps);
 
+        Part2(seeds, maps);
+    }
+
+    private static void Part1(List<long> seeds, Dictionary<string, Map> maps)
+    {
         var lowestSeed = long.MinValue;
         var lowest = long.MaxValue;
 
@@ -39,6 +45,56 @@ class Puzzle5 : IPuzzle
 
         System.Console.WriteLine("Answer = {0}; seed = {1}", lowest, lowestSeed);
     }
+
+    private static void Part2(List<long> seeds, Dictionary<string, Map> maps)
+    {
+
+        var range = new List<(long, long)>();
+        for (int i = 0; i < seeds.Count; i += 2)
+        {
+            range.Add((seeds[i], seeds[i + 1]));
+        }
+
+        object locker = new object();
+        var lowestSeed = long.MinValue;
+        var lowest = long.MaxValue;
+
+        Parallel.ForEach(range, r =>
+        {
+            System.Console.WriteLine("{1} Seeds staring at {0}", r.Item1, r.Item2);
+            for (int j = 0; j < r.Item2; j++)
+            {
+                long seed = r.Item1 + j;
+
+                var type = "seed";
+                var value = seed;
+                while (true)
+                {
+                    if (type == "location")
+                        break;
+
+                    var map = maps[type];
+                    value = map.Apply(value);
+                    type = map.Destiantion;
+                }
+
+                if (value < lowest)
+                {
+                    lock (locker)
+                    {
+
+                        lowest = value;
+                        lowestSeed = seed;
+                    }
+                }
+            }
+            System.Console.WriteLine("Completed: {1} Seeds staring at {0}", r.Item1, r.Item2);
+            System.Console.WriteLine("Intemediate Answer = {0}; seed = {1}", lowest, lowestSeed);
+        });
+
+        System.Console.WriteLine("Final Answer = {0}; seed = {1}", lowest, lowestSeed);
+    }
+
 
     private static (List<long>, Dictionary<string, Map>) ParseLines(string[] lines)
     {
