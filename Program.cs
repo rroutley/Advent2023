@@ -1,2 +1,2 @@
-﻿var puzzle = new Puzzle4();
+﻿var puzzle = new Puzzle5();
 puzzle.Excute();
