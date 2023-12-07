@@ -47,7 +47,7 @@ class Puzzle7 : IPuzzle
 
             if (xStrength != yStrength)
             {
-                return -xStrength.CompareTo(yStrength);
+                return xStrength.CompareTo(yStrength);
             }
 
             for (int i = 0; i < 5; i++)
@@ -67,7 +67,8 @@ class Puzzle7 : IPuzzle
 
     record Hand(char[] Cards)
     {
-        internal static readonly List<char> Ordering = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+        //    internal static readonly List<char> Ordering = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+        internal static readonly List<char> Ordering = ['J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A'];
         public override string ToString()
         {
             return string.Join("", Cards);
@@ -75,18 +76,56 @@ class Puzzle7 : IPuzzle
 
         public enum Type
         {
-            FiveOfAKind,
-            FourOfAKind,
-            FullHouse,
-            ThreeOfAKind,
-            TwoPair,
-            OnePair,
             HighCard,
+            OnePair,
+            TwoPair,
+            ThreeOfAKind,
+            FullHouse,
+            FourOfAKind,
+            FiveOfAKind,
         }
+
+        private Type? mStrength;
 
         public Type Strength()
         {
-            var rating = Cards.Select(c => Ordering.IndexOf(c))
+            if (mStrength.HasValue)
+                return mStrength.Value;
+
+            var maxStrength = RecursiveStrength(Cards);
+
+            mStrength = maxStrength;
+            return maxStrength;
+        }
+
+        private Type RecursiveStrength(char[] cards)
+        {
+            var maxStrength = Strength(cards);
+            for (int i = 0; i < 5; i++)
+            {
+                if (cards[i] == 'J')
+                {
+                    for (int j = 1; j < Ordering.Count; j++)
+                    {
+                        var c = new char[5];
+                        cards.CopyTo(c, 0);
+                        c[i] = Ordering[j];
+
+                        var strength = RecursiveStrength(c);
+                        if (strength > maxStrength)
+                        {
+                            maxStrength = strength;
+                        }
+                    }
+                }
+            }
+
+            return maxStrength;
+        }
+
+        private Type Strength(char[] cards)
+        {
+            var rating = cards.Select(c => Ordering.IndexOf(c))
                          .OrderByDescending(c => c)
                          .GroupBy(c => c)
                          .Select(g => new { Card = Ordering[g.Key], Ordering = g, Count = g.Count() })
@@ -104,12 +143,8 @@ class Puzzle7 : IPuzzle
                 2 => Type.OnePair,
                 _ => Type.HighCard,
             };
-
             return kind;
-
         }
-
-
     };
 
     string sample = """
