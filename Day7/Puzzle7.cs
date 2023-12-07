@@ -28,7 +28,7 @@ class Puzzle7 : IPuzzle
 
         foreach (var hand in ordered)
         {
-            System.Console.WriteLine(hand);
+            System.Console.WriteLine($"{hand.Item1} {hand.Item1.Strength()} {hand.Item2} ");
         }
 
         var answer = ordered.Select((h, i) => (i + 1) * h.Item2).Sum();
@@ -42,21 +42,21 @@ class Puzzle7 : IPuzzle
         {
             if (y == null || x == null) return -1;
 
-            var ts = x.Strength();
-            var os = y.Strength();
+            var xStrength = x.Strength();
+            var yStrength = y.Strength();
 
-            if (ts != os)
+            if (xStrength != yStrength)
             {
-                return -ts.CompareTo(os);
+                return -xStrength.CompareTo(yStrength);
             }
 
             for (int i = 0; i < 5; i++)
             {
-                var to = Hand.Ordering.IndexOf(x.Cards[i]);
-                var oo = Hand.Ordering.IndexOf(y.Cards[i]);
-                if (to != oo)
+                var xRank = Hand.Ordering.IndexOf(x.Cards[i]);
+                var yRank = Hand.Ordering.IndexOf(y.Cards[i]);
+                if (xRank != yRank)
                 {
-                    return to.CompareTo(oo);
+                    return xRank.CompareTo(yRank);
                 }
 
             }
@@ -93,44 +93,17 @@ class Puzzle7 : IPuzzle
                          .OrderByDescending(g => g.Count)
                          .ToArray();
 
-            Type kind;
 
-            if (rating[0].Count == 5)
+            var kind = rating[0].Count switch
             {
-                // Five of a Kind
-                kind = Type.FiveOfAKind;
-            }
-            else if (rating[0].Count == 4)
-            {
-                //Four of a Kind
-                kind = Type.FourOfAKind;
-            }
-            else if (rating[0].Count == 3 && rating[1].Count == 2)
-            {
-                // Full House
-                kind = Type.FullHouse;
-
-            }
-            else if (rating[0].Count == 3)
-            {
-                // Three Of a kind
-                kind = Type.ThreeOfAKind;
-            }
-            else if (rating[0].Count == 2 && rating[1].Count == 2)
-            {
-                // Two Pair
-                kind = Type.TwoPair;
-            }
-            else if (rating[0].Count == 2)
-            {
-                // One Pair
-                kind = Type.OnePair;
-            }
-            else
-            {
-                // High Card
-                kind = Type.HighCard;
-            }
+                5 => Type.FiveOfAKind,
+                4 => Type.FourOfAKind,
+                3 when rating[1].Count == 2 => Type.FullHouse,
+                3 => Type.ThreeOfAKind,
+                2 when rating[1].Count == 2 => Type.TwoPair,
+                2 => Type.OnePair,
+                _ => Type.HighCard,
+            };
 
             return kind;
 
