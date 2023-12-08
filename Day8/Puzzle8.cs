@@ -1,4 +1,5 @@
 
+using System.Data.Common;
 using System.Text.RegularExpressions;
 
 class Puzzle8 : IPuzzle
@@ -9,7 +10,7 @@ class Puzzle8 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day8/input.txt");
-        lines = sample.Replace("\n", "").Split(['\r']);
+        //lines = sample.Replace("\n", "").Split(['\r']);
 
         var instructions = lines[0].ToArray();
 
@@ -59,41 +60,55 @@ class Puzzle8 : IPuzzle
 
         var positions = directions.Keys.Where(k => k.EndsWith('A')).ToList();
 
-        bool done = false;
-        while (!done)
+        System.Console.WriteLine(positions.Count);
+        System.Console.WriteLine(instructions.Count());
+
+        var cycles = new List<long>();
+
+        for (int i = 0; i < positions.Count; i++)
         {
-
-            var direction = instructions[p % instructions.Length];
-            p++;
-
-            done = true;
-            for (int i = 0; i < positions.Count; i++)
-            {
-                var pos = positions[i];
-                //      System.Console.WriteLine($"From {pos} go {direction}");
-                pos = direction switch
-                {
-                    'L' => directions[pos].Left,
-                    'R' => directions[pos].Right,
-                    _ => throw new NotImplementedException()
-                };
-
-                if (!pos.EndsWith('Z'))
-                    done = false;
-
-                positions[i] = pos;
-            }
-
-
-            if (p % 100_000_000 == 0)
-            {
-                System.Console.WriteLine(p);
-            }
+            var cycle = Part2a(instructions, directions, positions[i]);
+            cycles.Add(cycle);
+            System.Console.WriteLine($"{positions[i]} cycle len={cycle}");
         }
-        System.Console.WriteLine($"Reached {string.Join(", ", positions)} in {p} moves");
+
+        System.Console.WriteLine("GCD = {0}", cycles.Aggregate(GCD));
+        System.Console.WriteLine("Answer = LCM = {0}", cycles.Aggregate((x, y) => x * y / GCD(x, y)));
+
     }
 
+    private static long Part2a(char[] instructions, Dictionary<string, (string Left, string Right)> directions, string start)
+    {
+        long p = 0;
+        var pos = start;
+        while (!pos.EndsWith('Z'))
+        {
+            var direction = instructions[p % instructions.Length];
+            p++;
+            //  System.Console.WriteLine($"From {pos} go {direction}");
+            pos = direction switch
+            {
+                'L' => directions[pos].Left,
+                'R' => directions[pos].Right,
+                _ => throw new NotImplementedException()
+            };
 
+        }
+        System.Console.WriteLine($"Reached {pos} in {p} moves");
+        return p;
+    }
+    private static long GCD(long a, long b)
+    {
+        while (a != 0 && b != 0)
+        {
+            if (a > b)
+                a %= b;
+            else
+                b %= a;
+        }
+
+        return a | b;
+    }
     string sample = """
                     LR
 
