@@ -1,11 +1,4 @@
-using System.Data;
-using System.Drawing;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
-
 using Point2D = (int x, int y);
-using Thing = (int dx, int dy, Direction);
 
 enum Direction
 {
@@ -144,16 +137,16 @@ class Puzzle10 : IPuzzle
         using var writer = File.CreateText(fileName);
         writer.NewLine = "\n";
 
-        var height = canvas.GetLength(0);
-        var width = canvas.GetLength(1);
+        var height = canvas.GetLength(1);
+        var width = canvas.GetLength(0);
 
         writer.WriteLine("P2");
         writer.WriteLine("# Day 10 AoC");
-        writer.WriteLine($"{canvas.GetLength(0)} {canvas.GetLength(1)}");
-        writer.WriteLine(3); // Maximum greyscale value
-        for (int r = 0; r < canvas.GetLength(1); r++)
+        writer.WriteLine($"{width} {height}");
+        writer.WriteLine(White); // Maximum greyscale value
+        for (int r = 0; r < height; r++)
         {
-            for (int c = 0; c < canvas.GetLength(0); c++)
+            for (int c = 0; c < width; c++)
             {
                 writer.Write(canvas[c, r]);
                 writer.Write(" ");
@@ -184,7 +177,7 @@ class Puzzle10 : IPuzzle
 
 
 
-    private void FloodFill(byte[,] canvas, (int, int) value)
+    private void FloodFill(byte[,] canvas, Point2D value)
     {
         var width = canvas.GetLength(0);
         var height = canvas.GetLength(1);
@@ -193,12 +186,12 @@ class Puzzle10 : IPuzzle
         queue.Enqueue(value);
         while (queue.Count > 0)
         {
-            var pos = queue.Dequeue();
+            var (x, y) = queue.Dequeue();
 
             for (int i = 0; i < 4; i++)
             {
                 var dir = (Direction)i;
-                Point2D newPos = (pos.x + deltas[dir].x, pos.y + deltas[dir].y);
+                Point2D newPos = (x + deltas[dir].x, y + deltas[dir].y);
                 // Check still within grid
                 if (newPos.x < 0 || newPos.x >= width || newPos.y < 0 || newPos.y >= height)
                 {
@@ -225,9 +218,9 @@ class Puzzle10 : IPuzzle
             output[i] = new String(' ', cols).ToArray();
         }
 
-        foreach (var point in points)
+        foreach (var (c, r) in points)
         {
-            output[point.y][point.x] = grid[point.x, point.y];
+            output[r][c] = grid[c, r];
         }
 
         for (int i = 0; i < rows; i++)
@@ -280,7 +273,7 @@ class Puzzle10 : IPuzzle
         System.Console.WriteLine($"Starting from {position}");
         do
         {
-            var possible = CandidateMoves(position, total > 0);
+            var possible = CandidateMoves(position, skipChecks: total > 0);
 
             // No back tracking
             position = possible.Where(p => !history.Contains(p)).First();
