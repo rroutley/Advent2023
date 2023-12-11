@@ -14,16 +14,24 @@ class Puzzle11 : IPuzzle
         var lines = File.ReadAllLines("Day11/input.txt");
         // lines = sample.Replace("\n", "").Split(['\r']);
 
+        // part 1
         var galaxies = ParseLines(lines);
 
-        var universe = ApplyExpansion(galaxies);
+        var universe = ApplyExpansion(galaxies, 1);
 
-        Part1(universe);
+        TotalShortestPath(universe);
+
+        // Part 2
+        galaxies = ParseLines(lines);
+
+        universe = ApplyExpansion(galaxies, 1_000_000 - 1);
+
+        TotalShortestPath(universe);
     }
 
-    private static void Part1(List<(int x, int y)> universe)
+    private static void TotalShortestPath(List<Point2D> universe)
     {
-        var total = 0;
+        var total = 0L;
         var history = new HashSet<(int, int)>();
         for (int i = 0; i < universe.Count; i++)
         {
@@ -46,7 +54,7 @@ class Puzzle11 : IPuzzle
 
                 var dist = Math.Abs(g1.x - g2.x) + Math.Abs(g1.y - g2.y);
 
-                //      System.Console.WriteLine($"Dist from Galacy {i + 1} {g1} to Galacy {j + 1} {g2} is {dist} units");
+                //      System.Console.WriteLine($"Dist from Galaxy {i + 1} {g1} to Galaxy {j + 1} {g2} is {dist} units");
 
                 total += dist;
             }
@@ -54,7 +62,7 @@ class Puzzle11 : IPuzzle
         System.Console.WriteLine($"Answer = {total}");
     }
 
-    private List<Point2D> ApplyExpansion(List<MutablePoint> galaxies)
+    private List<Point2D> ApplyExpansion(List<MutablePoint> galaxies, int amount)
     {
         var allRows = Enumerable.Range(0, rows);
         var allCols = Enumerable.Range(0, cols);
@@ -65,13 +73,11 @@ class Puzzle11 : IPuzzle
         foreach (var col in missingCols)
         {
             InsertColumnAt(col);
-            cols++;
         }
 
         foreach (var row in missingRows)
         {
             InsertRowAt(row);
-            rows++;
         }
 
         return galaxies.Select(p => p.ToPoint()).ToList();
@@ -82,7 +88,7 @@ class Puzzle11 : IPuzzle
             {
                 if (g.x >= col)
                 {
-                    g.x++;
+                    g.x += amount;
                 }
             }
         }
@@ -92,7 +98,7 @@ class Puzzle11 : IPuzzle
             {
                 if (g.y >= col)
                 {
-                    g.y++;
+                    g.y += amount;
                 }
             }
         }
