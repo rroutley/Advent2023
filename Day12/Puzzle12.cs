@@ -7,7 +7,7 @@ class Puzzle12 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day12/input.txt");
-      //  lines = sample.Replace("\n", "").Split(['\r']);
+        //  lines = sample.Replace("\n", "").Split(['\r']);
 
         var test = NewMethod(".??..??...?##. 1,1,3");
         System.Console.WriteLine(test.IsValid("..#...#...###."));
@@ -23,9 +23,8 @@ class Puzzle12 : IPuzzle
         {
             ConditionMap condition = NewMethod(line);
 
-            var combinations = condition.FindCombinations();
-
             System.Console.WriteLine($"{line} =>");
+            var combinations = condition.FindCombinations();
             foreach (var result in combinations)
             {
                 System.Console.WriteLine($"  {result}");
@@ -61,24 +60,36 @@ class Puzzle12 : IPuzzle
 
             void Recurse(string candidate, int start)
             {
+                // Check Validity up to the current starting point
+                if (!IsValid(candidate, start))
+                {
+                    return;
+                }
+                else if (start == candidate.Length)
+                {
+                    // We have a valid combination of the correct length
+                    results.Add(candidate);
+                    return;
+                }
+
+
                 for (int i = start; i < candidate.Length; i++)
                 {
                     var c = candidate[i];
 
                     if (c == '?')
                     {
+                        // Try replacing the ? with a .
                         Recurse(candidate[..i] + '.' + candidate[(i + 1)..], i + 1);
 
+                        // Try replacing the ? with a #
                         Recurse(candidate[..i] + '#' + candidate[(i + 1)..], i + 1);
 
                     }
-                }
-
-
-
-                if (IsValid(candidate))
-                {
-                    results.Add(candidate);
+                    else
+                    {
+                        Recurse(candidate, i + 1);
+                    }
                 }
 
 
@@ -86,7 +97,7 @@ class Puzzle12 : IPuzzle
 
         }
 
-        public bool IsValid(string candidate)
+        public bool IsValid(string candidate, int end = int.MaxValue)
         {
 
             var values = Values.GetEnumerator();
@@ -99,7 +110,7 @@ class Puzzle12 : IPuzzle
                 return false;
             }
 
-            for (int i = 0; i < candidate.Length; i++)
+            for (int i = 0; i < candidate.Length && i < end; i++)
             {
                 var c = candidate[i];
 
@@ -141,20 +152,23 @@ class Puzzle12 : IPuzzle
                     }
                     digitsRemaining--;
                 }
+            }
 
-
-            }
-            if (digitsRemaining != 0)
+            // Check end condition if we are testing the whole string
+            if (end >= candidate.Length)
             {
-                return false;
-            }
-            if (inValue)
-            {
-                hasMoreValues = values.MoveNext();
-            }
-            if (hasMoreValues)
-            {
-                return false;
+                if (digitsRemaining != 0)
+                {
+                    return false;
+                }
+                if (inValue)
+                {
+                    hasMoreValues = values.MoveNext();
+                }
+                if (hasMoreValues)
+                {
+                    return false;
+                }
             }
 
             return true;
