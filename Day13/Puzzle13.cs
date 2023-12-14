@@ -1,6 +1,4 @@
-
-
-using System.Runtime.InteropServices.Marshalling;
+using System.Text;
 
 class Puzzle13 : IPuzzle
 {
@@ -9,35 +7,72 @@ class Puzzle13 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day13/input.txt");
-        //lines = sample.Replace("\n", "").Split(['\r']);
+        //    lines = sample.Replace("\n", "").Split(['\r']);
 
         var scenes = LoadScenes(lines);
 
         var total = 0;
         foreach (var scene in scenes)
         {
-            if (TryFindHorizontal(scene, out int position))
-            {
-                total += position * 100;
-                System.Console.WriteLine(position);
-            }
+            var position = FindMirrorPosition(scene, 0);
 
-            if (TryFindVertical(scene, out position))
-            {
-                total += position;
-                System.Console.WriteLine(position);
-            }
+            position = FlipUntilNewPosition(scene, position);
+
+            System.Console.WriteLine(position);
+            total += position;
         }
 
         System.Console.WriteLine($"Answer = {total}");
     }
 
-    private bool TryFindVertical(List<string> scene, out int position)
+    private int FlipUntilNewPosition(List<string> scene, int lastPosition)
     {
+        for (int i = 0; i < scene[0].Length; i++)
+        {
+            for (int j = 0; j < scene.Count; j++)
+            {
+                // Flip one tile at j,i
+                var temp = scene[j];
+                var sb = new StringBuilder(scene[j]);
+                sb[i] = temp[i] == '.' ? '#' : '.';
+                scene[j] = sb.ToString();
+
+                int position = FindMirrorPosition(scene, lastPosition);
+                if (position > 0)
+                {
+                    return position;
+                }
+
+                // return to original 
+                scene[j] = temp;
+
+            }
+
+        }
+        throw new InvalidOperationException();
+    }
+
+    private int FindMirrorPosition(List<string> scene, int lastPosition)
+    {
+        if (TryFindHorizontal(scene, lastPosition / 100, out int position))
+        {
+            return position * 100;
+        }
+
+        else if (TryFindVertical(scene, lastPosition, out position))
+        {
+            return position;
+        }
+        return -1;
+    }
+
+    private bool TryFindVertical(List<string> scene, int lastPosition, out int position)
+    {
+        lastPosition--;
         for (int i = 0; i < scene[0].Length - 1; i++)
         {
 
-            if (IsValid(i))
+            if (IsValid(i) && (i != lastPosition))
             {
                 position = i + 1; // Answer is 1 based 
                 return true;
@@ -67,12 +102,12 @@ class Puzzle13 : IPuzzle
         }
     }
 
-    private bool TryFindHorizontal(List<string> scene, out int position)
+    private bool TryFindHorizontal(List<string> scene, int lastPosition, out int position)
     {
+        lastPosition--;
         for (int i = 0; i < scene.Count - 1; i++)
         {
-
-            if (IsValid(i))
+            if (IsValid(i) && (i != lastPosition))
             {
                 position = i + 1; // Answer is 1 based 
                 return true;
