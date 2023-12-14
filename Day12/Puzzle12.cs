@@ -1,4 +1,5 @@
 
+using System.Text.RegularExpressions;
 
 class Puzzle12 : IPuzzle
 {
@@ -7,37 +8,53 @@ class Puzzle12 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day12/input.txt");
-        //  lines = sample.Replace("\n", "").Split(['\r']);
+        //        lines = sample.Replace("\n", "").Split(['\r']);
 
-        var test = NewMethod(".??..??...?##. 1,1,3");
-        System.Console.WriteLine(test.IsValid("..#...#...###."));
-        System.Console.WriteLine(test.IsValid("..#..#....###."));
-        System.Console.WriteLine(test.IsValid(".#....#...###."));
-        System.Console.WriteLine(test.IsValid(".#...#....###."));
+        // var test = ParseLine(".??..??...?##. 1,1,3");
+        // System.Console.WriteLine(test.IsValid("..#...#...###."));
+        // System.Console.WriteLine(test.IsValid("..#..#....###."));
+        // System.Console.WriteLine(test.IsValid(".#....#...###."));
+        // System.Console.WriteLine(test.IsValid(".#...#....###."));
 
-        System.Console.WriteLine(test.IsValid(".##..##...###."));
-        System.Console.WriteLine(test.IsValid(".#.#.##...###."));
+        // System.Console.WriteLine(test.IsValid(".##..##...###."));
+        // System.Console.WriteLine(test.IsValid(".#.#.##...###."));
+
+        // test = ParseLine(".??..??...?##. 1,1,3");
+        // test = test.Unfold(2);
+
+        // System.Console.WriteLine(test.IsValid(".#...#....###.?.??..??...?##.", 14));
 
         var total = 0;
-        foreach (var line in lines)
-        {
-            ConditionMap condition = NewMethod(line);
+        var completed = 0;
+        object locker = new object();
 
-            System.Console.WriteLine($"{line} =>");
+        Parallel.ForEach(lines, line =>
+        {
+            ConditionMap condition = ParseLine(line);
+            condition = condition.Unfold(5);
+
+            // System.Console.WriteLine($"{condition} =>");
             var combinations = condition.FindCombinations();
-            foreach (var result in combinations)
+            // foreach (var result in combinations)
+            // {
+            //     System.Console.WriteLine($"  {result}");
+            //     total++;
+            // }
+            lock (locker)
             {
-                System.Console.WriteLine($"  {result}");
-                total++;
+                total += combinations.Count();
+                completed++;
             }
+            System.Console.WriteLine($"{condition} =>  {combinations.Count()} : {completed} completed");
+
 
             System.Console.WriteLine();
-        }
+        });
 
-        System.Console.WriteLine(total);
+        System.Console.WriteLine($"Answer ={total}");
     }
 
-    private static ConditionMap NewMethod(string line)
+    private static ConditionMap ParseLine(string line)
     {
         (string conditionMap, string p2) = line.Split(' ', 2);
         var conditionValues = p2.Split(',').Select(int.Parse);
@@ -86,11 +103,11 @@ class Puzzle12 : IPuzzle
                         Recurse(candidate[..i] + '#' + candidate[(i + 1)..], i + 1);
 
                     }
-                    else
-                    {
-                        Recurse(candidate, i + 1);
-                    }
+
                 }
+
+
+                Recurse(candidate, candidate.Length);
 
 
             }
@@ -170,11 +187,57 @@ class Puzzle12 : IPuzzle
                     return false;
                 }
             }
+            else
+            {
+                // will the remining values fit in the rest of the groups?
+                // var fixedGroups = Regex.Matches(candidate[end..], @"[\?#]+").Select(m => m.Groups[0].Value.Length).ToArray();
+                // if (inValue)
+                // {
+                //     hasMoreValues = values.MoveNext();
+                //     if (fixedGroups.Length == 0)
+                //     {
+                //         return false;
+                //     }
+                //     fixedGroups = fixedGroups[1..];
+
+                // }
+
+                // int i = 0;
+                // while (hasMoreValues)
+                // {
+                //     if (i >= fixedGroups.Length)
+                //     {
+                //         return false;
+                //     }
+                //     if (values.Current > fixedGroups[i++])
+                //     {
+                //         continue;
+                //     }
+                //     hasMoreValues = values.MoveNext();
+                // }
+
+            }
 
             return true;
         }
 
 
+        public ConditionMap Unfold(int times)
+        {
+            var fiveFold = Enumerable.Range(0, times);
+
+            var map = string.Join("?", fiveFold.Select(f => Map));
+            var values = fiveFold.SelectMany(f => Values).ToList();
+
+            return new ConditionMap(map, values);
+        }
+
+
+
+        public override string ToString()
+        {
+            return $"{Map} {string.Join(',', Values)}";
+        }
     }
 
     string sample = """
