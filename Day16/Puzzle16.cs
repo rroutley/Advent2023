@@ -3,56 +3,29 @@ using Point2D = (int x, int y);
 
 class Puzzle16 : IPuzzle
 {
-    int beams = 0;
-
     public void Excute()
     {
 
         var lines = File.ReadAllLines("Day16/input.txt");
-        lines = sample.Replace("\n", "").Split(['\r']);
+        //  lines = sample.Replace("\n", "").Split(['\r']);
 
         Cell[,] grid = ParseLines(lines);
 
-        var start = grid[0, 0];
-        start.BeamDirections.Add((beams++, Direction.East));
+        var start = new Cell((-1, 0), '.');
+        start.BeamDirections.Add(Direction.East);
 
         FollowBeams(grid, start);
 
 
-        Dump(grid);
+        Dump(grid, System.Console.Out);
+        using StreamWriter writer = File.CreateText("day16/output.txt");
+        Dump(grid, writer, true);
 
         var total = Score(grid);
 
         System.Console.WriteLine($"Answer ={total}");
     }
 
-    private int Score(Cell[,] grid)
-    {
-        int score = 0;
-        for (int r = 0; r < rows; r++)
-        {
-            for (int c = 0; c < cols; c++)
-            {
-                score += grid[c, r].IsEnergized ? 1 : 0;
-            }
-
-        }
-        return score;
-    }
-
-    private void Dump(Cell[,] grid)
-    {
-        for (int r = 0; r < rows; r++)
-        {
-            System.Console.Write($"{r:000}: ");
-            for (int c = 0; c < cols; c++)
-            {
-                System.Console.Write(grid[c, r].IsEnergized ? '#' : '.');
-            }
-            System.Console.WriteLine();
-        }
-        System.Console.WriteLine();
-    }
 
     private void FollowBeams(Cell[,] grid, Cell start)
     {
@@ -66,14 +39,13 @@ class Puzzle16 : IPuzzle
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-
-
+        
             current.IsEnergized = true;
-            foreach (var (beam, dir) in current.BeamDirections)
+            foreach (var dir in current.BeamDirections)
             {
                 if (!history.Add((dir, current.position)))
                 {
-                    // this beam has been here before.
+                    // A beam going in this direction been here before.
                     continue;
                 }
 
@@ -92,7 +64,7 @@ class Puzzle16 : IPuzzle
                 switch (next.type)
                 {
                     case '.':
-                        next.BeamDirections.Add((beam, dir));
+                        next.BeamDirections.Add(dir);
                         break;
                     case '/':
                         {
@@ -104,7 +76,7 @@ class Puzzle16 : IPuzzle
                                 Direction.West => Direction.South,
                                 _ => throw new NotImplementedException(),
                             };
-                            next.BeamDirections.Add((beam, newDir));
+                            next.BeamDirections.Add(newDir);
                             break;
                         }
                     case '\\':
@@ -117,7 +89,7 @@ class Puzzle16 : IPuzzle
                                 Direction.West => Direction.North,
                                 _ => throw new NotImplementedException(),
                             };
-                            next.BeamDirections.Add((beam, newDir));
+                            next.BeamDirections.Add(newDir);
                             break;
                         }
                     case '|':
@@ -125,12 +97,12 @@ class Puzzle16 : IPuzzle
                         {
                             case Direction.North:
                             case Direction.South:
-                                next.BeamDirections.Add((beam, dir));
+                                next.BeamDirections.Add(dir);
                                 break;
                             case Direction.East:
                             case Direction.West:
-                                next.BeamDirections.Add((beams++, Direction.North));
-                                next.BeamDirections.Add((beam, Direction.South));
+                                next.BeamDirections.Add(Direction.North);
+                                next.BeamDirections.Add(Direction.South);
                                 break;
                             default:
                                 throw new NotImplementedException();
@@ -141,12 +113,12 @@ class Puzzle16 : IPuzzle
                         {
                             case Direction.East:
                             case Direction.West:
-                                next.BeamDirections.Add((beam, dir));
+                                next.BeamDirections.Add(dir);
                                 break;
                             case Direction.North:
                             case Direction.South:
-                                next.BeamDirections.Add((beams++, Direction.East));
-                                next.BeamDirections.Add((beam, Direction.West));
+                                next.BeamDirections.Add(Direction.East);
+                                next.BeamDirections.Add(Direction.West);
                                 break;
                             default:
                                 throw new NotImplementedException();
@@ -157,10 +129,7 @@ class Puzzle16 : IPuzzle
                 }
                 queue.Enqueue(next);
 
-
             }
-
-
 
         }
     }
@@ -182,11 +151,74 @@ class Puzzle16 : IPuzzle
         return grid;
     }
 
+    private int Score(Cell[,] grid)
+    {
+        int score = 0;
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                score += grid[c, r].IsEnergized ? 1 : 0;
+            }
+
+        }
+        return score;
+    }
+
+    private void Dump(Cell[,] grid, TextWriter writer, bool mode = false)
+    {
+        for (int r = 0; r < rows; r++)
+        {
+            writer.Write($"{r:000}: ");
+            for (int c = 0; c < cols; c++)
+            {
+                if (mode)
+                {
+                    Cell cell = grid[c, r];
+                    if (cell.type == '.')
+                    {
+                        if (cell.BeamDirections.Count == 1)
+                        {
+                            var dir = cell.BeamDirections.Single();
+                            var sympol = dir switch
+                            {
+                                Direction.North => '^',
+                                Direction.East => '>',
+                                Direction.South => 'v',
+                                Direction.West => '<',
+                            };
+                            writer.Write(sympol);
+                        }
+                        else if (cell.BeamDirections.Count > 1)
+                        {
+                            writer.Write(cell.BeamDirections.Count);
+                        }
+                        else
+                        {
+                            writer.Write(' ');
+                        }
+
+                    }
+                    else
+                    {
+                        writer.Write(cell.type);
+                    }
+                }
+                else
+                {
+                    writer.Write(grid[c, r].IsEnergized ? '#' : '.');
+                }
+            }
+            writer.WriteLine();
+        }
+        writer.WriteLine();
+    }
+
     record Cell(Point2D position, char type)
     {
         public bool IsEnergized { get; set; }
 
-        public HashSet<(int, Direction)> BeamDirections { get; } = [];
+        public HashSet<Direction> BeamDirections { get; } = [];
     }
 
 
