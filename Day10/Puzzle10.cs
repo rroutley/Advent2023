@@ -1,9 +1,6 @@
 using Point2D = (int x, int y);
 
-enum Direction
-{
-    North, East, South, West
-}
+
 
 class Puzzle10 : IPuzzle
 {
@@ -18,13 +15,6 @@ class Puzzle10 : IPuzzle
     const char Ground = '.';
 
 
-    private readonly IReadOnlyDictionary<Direction, Point2D> deltas = new Dictionary<Direction, Point2D>
-    {
-        [Direction.North] = (0, -1),
-        [Direction.East] = (1, 0),
-        [Direction.South] = (0, 1),
-        [Direction.West] = (-1, 0),
-    };
 
     private IReadOnlyDictionary<char, Direction[]> validConnections = new Dictionary<char, Direction[]>
     {
@@ -191,7 +181,7 @@ class Puzzle10 : IPuzzle
             for (int i = 0; i < 4; i++)
             {
                 var dir = (Direction)i;
-                Point2D newPos = (x + deltas[dir].x, y + deltas[dir].y);
+                Point2D newPos = (x + Directions.Deltas[dir].x, y + Directions.Deltas[dir].y);
                 // Check still within grid
                 if (newPos.x < 0 || newPos.x >= width || newPos.y < 0 || newPos.y >= height)
                 {
@@ -290,7 +280,7 @@ class Puzzle10 : IPuzzle
         var validDirections = validConnections[grid[position.x, position.y]];
         foreach (var dir in validDirections)
         {
-            Point2D newPos = (position.x + deltas[dir].x, position.y + deltas[dir].y);
+            Point2D newPos = (position.x + Directions.Deltas[dir].x, position.y + Directions.Deltas[dir].y);
 
             // Checks only needed for the Starting position
             if (!skipChecks)

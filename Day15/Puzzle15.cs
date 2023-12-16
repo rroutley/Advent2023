@@ -28,34 +28,19 @@ class Puzzle15 : IPuzzle
 
             var boxIndex = Hash(lens.Label);
 
-        //    System.Console.WriteLine($"{value} {lens} {boxIndex}");
-
             var box = hashMap[boxIndex] ??= [];
             if (lens.Operation == "-")
             {
-
-                for (int i = 0; i < box.Count; i++)
-                {
-                    if (box[i].Label == lens.Label)
-                    {
-                        box.RemoveAt(i);
-                        break;
-                    }
-                }
+                box.Remove(lens);
             }
             else
             {
-                bool found = false;
-                for (int i = 0; i < box.Count; i++)
+                var i = box.IndexOf(lens);
+                if (i >= 0)
                 {
-                    if (box[i].Label == lens.Label)
-                    {
-                        box[i] = lens;
-                        found = true;
-                        break;
-                    }
+                    box[i] = lens;
                 }
-                if (!found)
+                else
                 {
                     box.Add(lens);
                 }
@@ -73,7 +58,8 @@ class Puzzle15 : IPuzzle
                 for (int j = 0; j < hashMap[i].Count; j++)
                 {
                     Lens item = hashMap[i][j];
-                    System.Console.Write($" {item.Label} {item.FocalLength}");
+                    System.Console.Write(' ');
+                    System.Console.Write(item);
                     score += (i + 1) * (j + 1) * item.FocalLength.Value;
                 }
                 System.Console.WriteLine();
@@ -84,8 +70,12 @@ class Puzzle15 : IPuzzle
     }
 
 
-    record Lens(string Label, string Operation, int? FocalLength)
+    readonly struct Lens(string label, string operation, int? focalLength) : IEquatable<Lens>
     {
+        public string Label { get; } = label;
+        public string Operation { get; } = operation;
+        public int? FocalLength { get; } = focalLength;
+
         internal static Lens Parse(string value)
         {
             if (value.Contains('-'))
@@ -99,7 +89,13 @@ class Puzzle15 : IPuzzle
             }
         }
 
+        public bool Equals(Lens other) => this.Label == other.Label;
 
+        public override bool Equals(object obj) => obj is Lens lens && this.Equals(lens);
+
+        public override int GetHashCode() => this.Label.GetHashCode();
+
+        public override string ToString() => $"{this.Label} {this.FocalLength}";
     }
 
     private int Hash(string value)
