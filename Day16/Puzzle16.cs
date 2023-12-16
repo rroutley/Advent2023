@@ -17,19 +17,86 @@ class Puzzle16 : IPuzzle
         FollowBeams(grid, start);
 
 
-        Dump(grid, System.Console.Out);
-        using StreamWriter writer = File.CreateText("day16/output.txt");
-        Dump(grid, writer, true);
+        //Dump(grid, System.Console.Out);
+        // using StreamWriter writer = File.CreateText("day16/output.txt");
+        //Dump(grid, writer, true);
 
         var total = Score(grid);
 
-        System.Console.WriteLine($"Answer ={total}");
+        System.Console.WriteLine($"Answer = {total}");
+
+        var bestStart = Part2(grid);
+        FollowBeams(grid, bestStart);
+        using StreamWriter writer = File.CreateText("day16/output.txt");
+        Dump(grid, writer, true);
+
+
     }
 
+    private Cell Part2(Cell[,] grid)
+    {
+        Cell start;
+        Cell bestStart = null;
+        int maxScore = int.MinValue;
+        for (int c = 0; c < cols; c++)
+        {
+            start = new Cell((c, -1), '.');
+            start.BeamDirections.Add(Direction.South);
+            FollowBeams(grid, start);
+            var score = Score(grid);
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestStart = start;
+                System.Console.WriteLine(start);
+            }
+        }
+        for (int c = 0; c < cols; c++)
+        {
+            start = new Cell((c, rows), '.');
+            start.BeamDirections.Add(Direction.North);
+            FollowBeams(grid, start);
+            var score = Score(grid);
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestStart = start;
+                System.Console.WriteLine(start);
+            }
+        }
+        for (int r = 0; r < rows; r++)
+        {
+            start = new Cell((-1, r), '.');
+            start.BeamDirections.Add(Direction.East);
+            FollowBeams(grid, start);
+            var score = Score(grid);
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestStart = start;
+                System.Console.WriteLine(start);
+            }
+        }
+        for (int r = 0; r < rows; r++)
+        {
+            start = new Cell((cols, r), '.');
+            start.BeamDirections.Add(Direction.West);
+            FollowBeams(grid, start);
+            var score = Score(grid);
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestStart = start;
+                System.Console.WriteLine(start);
+            }
+        }
+        System.Console.WriteLine($"Answer = {maxScore}");
+        return bestStart;
+    }
 
     private void FollowBeams(Cell[,] grid, Cell start)
     {
-
+        Reset(grid);
         var history = new HashSet<(Direction, Point2D)>();
 
         Queue<Cell> queue = [];
@@ -39,7 +106,7 @@ class Puzzle16 : IPuzzle
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-        
+
             current.IsEnergized = true;
             foreach (var dir in current.BeamDirections)
             {
@@ -165,6 +232,18 @@ class Puzzle16 : IPuzzle
         return score;
     }
 
+    private void Reset(Cell[,] grid)
+    {
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                grid[c, r].Reset();
+            }
+
+        }
+    }
+
     private void Dump(Cell[,] grid, TextWriter writer, bool mode = false)
     {
         for (int r = 0; r < rows; r++)
@@ -218,7 +297,13 @@ class Puzzle16 : IPuzzle
     {
         public bool IsEnergized { get; set; }
 
-        public HashSet<Direction> BeamDirections { get; } = [];
+        public HashSet<Direction> BeamDirections { get; private set; } = [];
+
+        public void Reset()
+        {
+            IsEnergized = false;
+            BeamDirections = [];
+        }
     }
 
 
