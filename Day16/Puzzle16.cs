@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Point2D = (int x, int y);
 
 
@@ -11,8 +12,7 @@ class Puzzle16 : IPuzzle
 
         Cell[,] grid = ParseLines(lines);
 
-        var start = new Cell((-1, 0), '.');
-        start.BeamDirections.Add(Direction.East);
+        var start = Cell.StartingAt((-1, 0), Direction.East);
 
         FollowBeams(grid, start);
 
@@ -35,63 +35,40 @@ class Puzzle16 : IPuzzle
 
     private Cell Part2(Cell[,] grid)
     {
-        Cell start;
         Cell bestStart = null;
         int maxScore = int.MinValue;
+        
         for (int c = 0; c < cols; c++)
         {
-            start = new Cell((c, -1), '.');
-            start.BeamDirections.Add(Direction.South);
-            FollowBeams(grid, start);
-            var score = Score(grid);
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestStart = start;
-                System.Console.WriteLine(start);
-            }
-        }
-        for (int c = 0; c < cols; c++)
-        {
-            start = new Cell((c, rows), '.');
-            start.BeamDirections.Add(Direction.North);
-            FollowBeams(grid, start);
-            var score = Score(grid);
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestStart = start;
-                System.Console.WriteLine(start);
-            }
+            var start = Cell.StartingAt((c, -1), Direction.South);
+            Check(start);
+
+            start = Cell.StartingAt((c, rows), Direction.North);
+            Check(start);
         }
         for (int r = 0; r < rows; r++)
         {
-            start = new Cell((-1, r), '.');
-            start.BeamDirections.Add(Direction.East);
-            FollowBeams(grid, start);
-            var score = Score(grid);
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestStart = start;
-                System.Console.WriteLine(start);
-            }
-        }
-        for (int r = 0; r < rows; r++)
-        {
-            start = new Cell((cols, r), '.');
-            start.BeamDirections.Add(Direction.West);
-            FollowBeams(grid, start);
-            var score = Score(grid);
-            if (score > maxScore)
-            {
-                maxScore = score;
-                bestStart = start;
-                System.Console.WriteLine(start);
-            }
+            var start = Cell.StartingAt((-1, r), Direction.East);
+            Check(start);
+
+            start = Cell.StartingAt((cols, r), Direction.West);
+            Check(start);
         }
         System.Console.WriteLine($"Answer = {maxScore}");
         return bestStart;
+
+
+        void Check(Cell start)
+        {
+            FollowBeams(grid, start);
+            var score = Score(grid);
+            if (score > maxScore)
+            {
+                maxScore = score;
+                bestStart = start;
+                System.Console.WriteLine(start);
+            }
+        }
     }
 
     private void FollowBeams(Cell[,] grid, Cell start)
@@ -110,16 +87,16 @@ class Puzzle16 : IPuzzle
             current.IsEnergized = true;
             foreach (var dir in current.BeamDirections)
             {
-                if (!history.Add((dir, current.position)))
+                if (!history.Add((dir, current.Position)))
                 {
-                    // A beam going in this direction been here before.
+                    // A beam going in this direction has been here before.
                     continue;
                 }
 
 
                 var (dx, dy) = Directions.Deltas[dir];
-                var x = current.position.x + dx;
-                var y = current.position.y + dy;
+                var x = current.Position.x + dx;
+                var y = current.Position.y + dy;
 
                 if (x < 0 || x >= cols || y < 0 || y >= rows)
                 {
@@ -128,7 +105,7 @@ class Puzzle16 : IPuzzle
                 }
 
                 var next = grid[x, y];
-                switch (next.type)
+                switch (next.Type)
                 {
                     case '.':
                         next.BeamDirections.Add(dir);
@@ -254,7 +231,7 @@ class Puzzle16 : IPuzzle
                 if (mode)
                 {
                     Cell cell = grid[c, r];
-                    if (cell.type == '.')
+                    if (cell.Type == '.')
                     {
                         if (cell.BeamDirections.Count == 1)
                         {
@@ -265,6 +242,7 @@ class Puzzle16 : IPuzzle
                                 Direction.East => '>',
                                 Direction.South => 'v',
                                 Direction.West => '<',
+                                _ => throw new NotImplementedException(),
                             };
                             writer.Write(sympol);
                         }
@@ -280,7 +258,7 @@ class Puzzle16 : IPuzzle
                     }
                     else
                     {
-                        writer.Write(cell.type);
+                        writer.Write(cell.Type);
                     }
                 }
                 else
@@ -293,7 +271,7 @@ class Puzzle16 : IPuzzle
         writer.WriteLine();
     }
 
-    record Cell(Point2D position, char type)
+    record Cell(Point2D Position, char Type)
     {
         public bool IsEnergized { get; set; }
 
@@ -303,6 +281,13 @@ class Puzzle16 : IPuzzle
         {
             IsEnergized = false;
             BeamDirections = [];
+        }
+
+        public static Cell StartingAt(Point2D position, Direction direction)
+        {
+            var cell = new Cell(position, '.');
+            cell.BeamDirections.Add(direction);
+            return cell;
         }
     }
 
