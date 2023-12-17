@@ -9,14 +9,14 @@ class Puzzle17 : IPuzzle
         var lines = File.ReadAllLines("Day17/input.txt");
         lines = sample.Replace("\n", "").Split(['\r']);
 
-        var grid = ParseLines(lines);
+        grid = ParseLines(lines);
 
 
-        var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 01), Manhatten);
+        var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 1), Manhatten);
 
         Dump(grid, result, System.Console.Out);
 
-        var total = rows;
+        var total = Score(grid, result);
 
         System.Console.WriteLine($"Answer ={total}");
     }
@@ -34,7 +34,7 @@ class Puzzle17 : IPuzzle
 
         // For node n, cameFrom[n] is the node immediately preceding it on the cheapest path from the start
         // to n currently known.
-        Dictionary<Point2D, Point2D> cameFrom = [];
+        Dictionary<Point2D, (Direction, Point2D)> cameFrom = [];
 
         // For node n, gScore[n] is the cost of the cheapest path from start to n currently known.
         Dictionary<Point2D, int> gScore = new()
@@ -56,11 +56,17 @@ class Puzzle17 : IPuzzle
 
             if (current == end)
             {
-                return ReconstructPath(cameFrom, current);//?????
+                return ReconstructPath(cameFrom, current);
             }
 
-            var neighbors = Directions.Deltas.Keys.Select(d => d.From(current));
-            foreach (var neighbor in neighbors)
+            var history = StepsInSameDirection(cameFrom, current);///????
+
+            var neighbors = Directions.Deltas.Keys.Where(d => !history.direction.IsBackwards(d))
+                                                  .Where(d => history.direction != d || (history.direction == d && history.steps < 3))
+                                                  .Select(d => (d, d.From(current)))
+                                                  .Where(p => p.Item2.IsWithinBounds(rows, cols));
+
+            foreach (var (dir, neighbor) in neighbors)
             {
                 // d(current,neighbor) is the weight of the edge from current to neighbor
                 // tentative_gScore is the distance from start to the neighbor through current
@@ -69,7 +75,7 @@ class Puzzle17 : IPuzzle
                 if (tentative_gScore < g)
                 {
                     // This path to neighbor is better than any previous one. Record it!
-                    cameFrom[neighbor] = current;
+                    cameFrom[neighbor] = (dir, current);
                     gScore[neighbor] = tentative_gScore;
                     fScore[neighbor] = tentative_gScore + h(neighbor, end);
                     if (!openSet.UnorderedItems.Any(i => i.Element == neighbor))
@@ -84,17 +90,46 @@ class Puzzle17 : IPuzzle
         return null;
     }
 
-    private int d((int x, int y) current, (int x, int y) neighbor)
+    private static (Direction direction, int steps) StepsInSameDirection(Dictionary<Point2D, (Direction direction, Point2D point)> cameFrom, Point2D current)
     {
-        return 1;
+        if (!cameFrom.ContainsKey(current))
+        {
+            return (Direction.East, 0);
+        }
+
+        Direction last;
+        int steps = 1;
+        last = cameFrom[current].direction;
+        current = cameFrom[current].point;
+        while (true)
+        {
+            if (!cameFrom.ContainsKey(current))
+            {
+                break;
+            }
+
+            if (cameFrom[current].direction != last)
+            {
+                break;
+            }
+            current = cameFrom[current].point;
+            steps++;
+        }
+
+        return (last, steps);
     }
 
-    private IEnumerable<Point2D> ReconstructPath(Dictionary<Point2D, Point2D> cameFrom, Point2D current)
+    private int d(Point2D current, Point2D neighbor)
+    {
+        return grid[neighbor.x, neighbor.y];
+    }
+
+    private IEnumerable<Point2D> ReconstructPath(Dictionary<Point2D, (Direction, Point2D)> cameFrom, Point2D current)
     {
         List<Point2D> totalPath = [current];
-        while (cameFrom.Keys.Contains(current))
+        while (cameFrom.ContainsKey(current))
         {
-            current = cameFrom[current];
+            current = cameFrom[current].Item2;
             totalPath.Insert(0, current);
         }
         return totalPath;
@@ -102,7 +137,19 @@ class Puzzle17 : IPuzzle
 
     static int Manhatten(Point2D a, Point2D b)
     {
-        return Math.Abs(a.x - b.x) + Math.Abs(a.y - b.y);
+        var dx = Math.Abs(a.x - b.x);
+        var dy = Math.Abs(a.y - b.y);
+
+        if (dx / 3 > dy)
+        {
+            return dx + dy + ((dx / 3 - dy )* 2);
+        }
+        if (dy / 3 > dx)
+        {
+            return dx + dy + ((dy / 3 - dx) * 2);
+        }
+
+        return dx + dy;
     }
 
 
@@ -134,9 +181,7 @@ class Puzzle17 : IPuzzle
             writer.Write($"{r:000}: ");
             for (int c = 0; c < cols; c++)
             {
-
-
-                if (path.Contains((c, r)))
+                if (path.Contains((c, r)) && !(r == 0 && c == 0))
                 {
                     System.Console.Write('.');
                 }
@@ -150,6 +195,21 @@ class Puzzle17 : IPuzzle
         writer.WriteLine();
     }
 
+    private int Score(int[,] grid, IEnumerable<Point2D> path)
+    {
+        int score = 0;
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                if (path.Contains((c, r)) && !(r == 0 && c == 0))
+                {
+                    score += grid[c, r];
+                }
+            }
+        }
+        return score;
+    }
     string sample = """
                     2413432311323
                     3215453535623
@@ -167,4 +227,5 @@ class Puzzle17 : IPuzzle
                     """;
     private int rows;
     private int cols;
+    private int[,] grid;
 }
