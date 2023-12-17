@@ -7,7 +7,7 @@ enum Direction
 }
 
 
-class Directions
+static class Directions
 {
     public static readonly IReadOnlyDictionary<Direction, Point2D> Deltas = new Dictionary<Direction, Point2D>
     {
@@ -17,4 +17,9 @@ class Directions
         [Direction.West] = (-1, 0),
     };
 
+
+    public static Point2D From(this Direction direction, Point2D p)
+    {
+        return (p.x + Deltas[direction].x, p.y + Deltas[direction].y);
+    }
 }
