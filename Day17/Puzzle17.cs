@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Point2D = (int x, int y);
 
 class Puzzle17 : IPuzzle
@@ -11,19 +14,119 @@ class Puzzle17 : IPuzzle
 
         grid = ParseLines(lines);
 
+        {
+            // var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 1), Manhatten);
 
-        var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 1), Manhatten);
+            // Dump(grid, result, System.Console.Out);
 
-        Dump(grid, result, System.Console.Out);
+            // var total = Score(grid, result);
 
-        var total = Score(grid, result);
+            // System.Console.WriteLine($"Answer ={total}");
+        }
+        {
+            var result = Disjktra(new Point2D(0, 0), new Point2D(cols - 1, rows - 1));
 
-        System.Console.WriteLine($"Answer ={total}");
+            Dump(grid, result, System.Console.Out);
+
+            var total = Score(grid, result);
+
+            System.Console.WriteLine($"Answer ={total}");
+        }
     }
+
+
+    public class PriorityItem
+    {
+
+        public PriorityItem(Point2D point, int priority)
+        {
+            Point = point;
+            Priority = priority;
+        }
+
+        public Point2D Point { get; set; }
+        public int Priority { get; set; }
+        public Direction Direction { get; set; }
+        public int Distance { get; set; }
+
+        public static readonly IComparer<PriorityItem> PriorityOrder = new PriorityComparer();
+
+        private class PriorityComparer : IComparer<PriorityItem>
+        {
+            public int Compare(PriorityItem x, PriorityItem y)
+            {
+                return x.Priority.CompareTo(y.Priority);
+            }
+        }
+    }
+
+
+
+    private IEnumerable<Point2D> Disjktra(Point2D start, Point2D end)
+    {
+
+        Dictionary<Point2D, int> dist = [];
+        Dictionary<Point2D, (Direction, Point2D)> prev = [];
+
+        List<PriorityItem> queue = new();
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                var point = (c, r);
+                dist[point] = point == start ? 0 : int.MaxValue;
+                queue.Add(new PriorityItem(point, dist[point]));
+            }
+        }
+
+        while (queue.Count > 0)
+        {
+            var item = queue[0];
+            queue.RemoveAt(0);
+            var current = item.Point;
+
+            // if (current == (4, 0))
+            // {
+            //     Debugger.Break();
+            // }
+
+
+            var history = StepsInSameDirection(prev, current);///????
+
+            var neighbors = Directions.Deltas.Keys
+                                                  .Where(d => !history.direction.IsBackwards(d))
+                                                  //  .Where(d => history.direction != d || (history.direction == d && history.steps < 3))
+                                                  .Select(d => (d, d.From(current)))
+                                                  .Where(p => p.Item2.IsWithinBounds(rows, cols))
+                                                  .ToList();
+
+            foreach (var (dir, neighbor) in neighbors)
+            {
+                // d(current,neighbor) is the weight of the edge from current to neighbor
+                var alt = dist[current] + d(current, neighbor, history.direction != dir || (history.direction == dir && history.steps < 3));
+                var g = dist[neighbor];
+                if (alt < g)
+                {
+                    // This path to neighbor is better than any previous one. Record it!
+                    prev[neighbor] = (dir, current);
+                    dist[neighbor] = alt;
+                    var index = queue.FindIndex(x => x.Point == neighbor);
+                    var itm = queue[index];
+                    itm.Priority = alt;
+
+                    queue.Sort(PriorityItem.PriorityOrder);
+                }
+
+            }
+
+        }
+
+        return ReconstructPath(prev, end);
+    }
+
 
     // A* finds a path from start to goal.
     // h is the heuristic function. h(n) estimates the cost to reach goal from node n.
-
     private IEnumerable<Point2D> Astar(Point2D start, Point2D end, Func<Point2D, Point2D, int> h)
     {
         // The set of discovered nodes that may need to be (re-)expanded.
@@ -70,7 +173,7 @@ class Puzzle17 : IPuzzle
             {
                 // d(current,neighbor) is the weight of the edge from current to neighbor
                 // tentative_gScore is the distance from start to the neighbor through current
-                var tentative_gScore = gScore[current] + d(current, neighbor);
+                var tentative_gScore = gScore[current] + d(current, neighbor, history.direction != dir || (history.direction == dir && history.steps < 3));
                 var g = gScore.ContainsKey(neighbor) ? gScore[neighbor] : int.MaxValue;
                 if (tentative_gScore < g)
                 {
@@ -119,9 +222,16 @@ class Puzzle17 : IPuzzle
         return (last, steps);
     }
 
-    private int d(Point2D current, Point2D neighbor)
+    private int d(Point2D current, Point2D neighbor, bool passesThreeStepRule)
     {
-        return grid[neighbor.x, neighbor.y];
+        if (passesThreeStepRule)
+        {
+            return grid[neighbor.x, neighbor.y];
+        }
+        else
+        {
+            return int.MaxValue / 2;
+        }
     }
 
     private IEnumerable<Point2D> ReconstructPath(Dictionary<Point2D, (Direction, Point2D)> cameFrom, Point2D current)
@@ -142,7 +252,7 @@ class Puzzle17 : IPuzzle
 
         if (dx / 3 > dy)
         {
-            return dx + dy + ((dx / 3 - dy )* 2);
+            return dx + dy + ((dx / 3 - dy) * 2);
         }
         if (dy / 3 > dx)
         {
