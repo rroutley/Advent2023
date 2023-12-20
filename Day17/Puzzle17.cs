@@ -15,13 +15,13 @@ class Puzzle17 : IPuzzle
         grid = ParseLines(lines);
 
         {
-            // var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 1), Manhatten);
+            var result = Astar(new Point2D(0, 0), new Point2D(cols - 1, rows - 1), Manhatten);
 
-            // Dump(grid, result, System.Console.Out);
+            Dump(grid, result, System.Console.Out);
 
-            // var total = Score(grid, result);
+            var total = Score(grid, result);
 
-            // System.Console.WriteLine($"Answer ={total}");
+            System.Console.WriteLine($"Answer ={total}");
         }
         {
             var result = Disjktra(new Point2D(0, 0), new Point2D(cols - 1, rows - 1));
@@ -35,25 +35,30 @@ class Puzzle17 : IPuzzle
     }
 
 
-    public class PriorityItem
+    public class Crucible
     {
-
-        public PriorityItem(Point2D point, int priority)
+        public Crucible(Point2D point, Crucible prev, int priority, Direction direction, int stepsInSameDirection)
         {
             Point = point;
             Priority = priority;
+            Direction = direction;
+            StepsInSameDirection = stepsInSameDirection;
+            Previous = prev;
         }
 
         public Point2D Point { get; set; }
+
+        public Crucible Previous { get; set; }
+
         public int Priority { get; set; }
         public Direction Direction { get; set; }
-        public int Distance { get; set; }
+        public int StepsInSameDirection { get; set; }
 
-        public static readonly IComparer<PriorityItem> PriorityOrder = new PriorityComparer();
+        public static readonly IComparer<Crucible> PriorityOrder = new PriorityComparer();
 
-        private class PriorityComparer : IComparer<PriorityItem>
+        private class PriorityComparer : IComparer<Crucible>
         {
-            public int Compare(PriorityItem x, PriorityItem y)
+            public int Compare(Crucible x, Crucible y)
             {
                 return x.Priority.CompareTo(y.Priority);
             }
@@ -65,63 +70,64 @@ class Puzzle17 : IPuzzle
     private IEnumerable<Point2D> Disjktra(Point2D start, Point2D end)
     {
 
-        Dictionary<Point2D, int> dist = [];
-        Dictionary<Point2D, (Direction, Point2D)> prev = [];
+        int minDistance = int.MaxValue;
+        Crucible minItem = null;
 
-        List<PriorityItem> queue = new();
-        for (int r = 0; r < rows; r++)
-        {
-            for (int c = 0; c < cols; c++)
-            {
-                var point = (c, r);
-                dist[point] = point == start ? 0 : int.MaxValue;
-                queue.Add(new PriorityItem(point, dist[point]));
-            }
-        }
+        List<Crucible> queue =
+        [
+            new Crucible((1, 0), null, grid[1, 0], Direction.East, 1),
+            new Crucible((0, 1), null, grid[0, 1], Direction.South, 1),
+        ];
+
+        HashSet<(Point2D, Direction)> seen = [];
 
         while (queue.Count > 0)
         {
+            queue.Sort(Crucible.PriorityOrder);
+
             var item = queue[0];
             queue.RemoveAt(0);
             var current = item.Point;
 
-            // if (current == (4, 0))
-            // {
-            //     Debugger.Break();
-            // }
 
+            if (current == end)
+            {
+                if (item.Priority < minDistance)
+                {
+                    minItem = item;
+                    minDistance = item.Priority;
+                }
+                continue;
+            }
 
-            var history = StepsInSameDirection(prev, current);///????
+            if (!seen.Add((current, item.Direction)))
+            {
+                continue;
+            }
 
             var neighbors = Directions.Deltas.Keys
-                                                  .Where(d => !history.direction.IsBackwards(d))
-                                                  //  .Where(d => history.direction != d || (history.direction == d && history.steps < 3))
+                                                  .Where(d => !item.Direction.IsBackwards(d))
+                                                  .Where(d => item.Direction != d || (item.Direction == d && item.StepsInSameDirection < 3))
                                                   .Select(d => (d, d.From(current)))
                                                   .Where(p => p.Item2.IsWithinBounds(rows, cols))
                                                   .ToList();
 
             foreach (var (dir, neighbor) in neighbors)
             {
-                // d(current,neighbor) is the weight of the edge from current to neighbor
-                var alt = dist[current] + d(current, neighbor, history.direction != dir || (history.direction == dir && history.steps < 3));
-                var g = dist[neighbor];
-                if (alt < g)
-                {
-                    // This path to neighbor is better than any previous one. Record it!
-                    prev[neighbor] = (dir, current);
-                    dist[neighbor] = alt;
-                    var index = queue.FindIndex(x => x.Point == neighbor);
-                    var itm = queue[index];
-                    itm.Priority = alt;
 
-                    queue.Sort(PriorityItem.PriorityOrder);
-                }
+                queue.Add(new Crucible(neighbor,
+                                       item,
+                                       item.Priority + d(current, neighbor, true),
+                                       dir,
+                                       item.Direction == dir ? item.StepsInSameDirection + 1 : 1));
+
+
+
 
             }
 
         }
-
-        return ReconstructPath(prev, end);
+        return ReconstructPath(minItem, start);
     }
 
 
@@ -241,6 +247,18 @@ class Puzzle17 : IPuzzle
         {
             current = cameFrom[current].Item2;
             totalPath.Insert(0, current);
+        }
+        return totalPath;
+    }
+
+
+    private IEnumerable<Point2D> ReconstructPath(Crucible current, Point2D start)
+    {
+        List<Point2D> totalPath = [current.Point];
+        while (current != null)
+        {
+            totalPath.Insert(0, current.Point);
+            current = current.Previous;
         }
         return totalPath;
     }
