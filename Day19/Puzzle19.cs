@@ -7,11 +7,35 @@ class Puzzle19 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day19/input.txt");
-    //    lines = sample.Replace("\n", "").Split(['\r']);
+        //lines = sample.Replace("\n", "").Split(['\r']);
 
+
+        (var workflows, var parts) = ParseLines(lines);
+
+        var partsAccepted = new List<Part>();
+
+
+        var interpretor = new Intepretor(workflows, "in");
+        foreach (var part in parts)
+        {
+            if (interpretor.Execute(part))
+            {
+                partsAccepted.Add(part);
+                System.Console.WriteLine($"Accepted {part}");
+            }
+        }
+
+        var total = partsAccepted.Sum(s => s.A + s.M + s.S + s.X);
+
+        System.Console.WriteLine($"Answer ={total}");
+    }
+
+    private (Dictionary<string, Workflow> workflows, List<Part> parts) ParseLines(string[] lines)
+    {
         int section = 0;
         var workflows = new Dictionary<string, Workflow>();
         var parts = new List<Part>();
+
         foreach (var line in lines)
         {
             if (string.IsNullOrEmpty(line))
@@ -23,7 +47,8 @@ class Puzzle19 : IPuzzle
             if (section == 0)
             {
                 int length = line.IndexOf('{');
-                var name = line.Substring(0, length);
+                var name = line[..length];
+
                 var flowList = line[(length + 1)..^1].Split(',');
 
                 var statements = new List<Statement>();
@@ -39,7 +64,7 @@ class Puzzle19 : IPuzzle
                     else
                     {
                         var expression = ParseExpression(flow[0..colon]);
-                        Statement body = ParseStatement(flow[(colon + 1)..]);
+                        var body = ParseStatement(flow[(colon + 1)..]);
                         statement = new ConditionalStatement(expression, body);
                     }
                     statements.Add(statement);
@@ -63,11 +88,7 @@ class Puzzle19 : IPuzzle
             }
         }
 
-
-
-        var total = lines.Count();
-
-        System.Console.WriteLine($"Answer ={total}");
+        return (workflows, parts);
     }
 
     private Expression ParseExpression(string v)
@@ -89,17 +110,100 @@ class Puzzle19 : IPuzzle
     record Part(int X, int M, int A, int S);
     record Workflow(string name, IEnumerable<Statement> Rules);
 
-    record Statement();
-    record Expression();
+    class Intepretor(IReadOnlyDictionary<string, Puzzle19.Workflow> flows, string start)
+    {
+        public int Result { get; set; }
+        public string NextFlow { get; internal set; }
 
-    record TrueExpression() : Expression;
+        public bool Execute(Part p)
+        {
+            Result = 0;
+            NextFlow = start;
+            while (Result == 0)
+            {
+                System.Console.Write($"{NextFlow} -> ");
+                var next = flows[NextFlow];
+                foreach (var statement in next.Rules)
+                {
+                    if (statement.Execute(this, p))
+                    {
+                        break;
+                    }
+                }
+            }
+            System.Console.WriteLine(Result == 1 ? "A" : "R");
+            return Result == 1;
+        }
+    }
 
-    record ConditionalStatement(Expression predicate, Statement body) : Statement;
-    record ConditionalExpression(string variable, string op, int value) : Expression;
 
-    record GotoStatement(string label) : Statement;
-    record AcceptStatement() : Statement;
-    record RejectStatement() : Statement;
+    abstract record Statement()
+    {
+        public abstract bool Execute(Intepretor intepretor, Part part);
+    }
+    abstract record Expression()
+    {
+        public abstract bool Evaluate(Part part);
+    }
+
+    record ConditionalStatement(Expression predicate, Statement body) : Statement
+    {
+        public override bool Execute(Intepretor intepretor, Part part)
+        {
+            if (predicate.Evaluate(part))
+            {
+                body.Execute(intepretor, part);
+                return true;
+            }
+            return false;
+        }
+    }
+    record ConditionalExpression(string variable, string op, int value) : Expression
+    {
+        public override bool Evaluate(Part part)
+        {
+            var accumulator = variable switch
+            {
+                "x" => part.X,
+                "m" => part.M,
+                "a" => part.A,
+                "s" => part.S,
+                _ => throw new NotImplementedException(),
+            };
+
+            return op switch
+            {
+                "<" => accumulator < value,
+                ">" => accumulator > value,
+                _ => throw new NotImplementedException(),
+            };
+        }
+    }
+
+    record GotoStatement(string Label) : Statement
+    {
+        public override bool Execute(Intepretor intepretor, Part part)
+        {
+            intepretor.NextFlow = Label;
+            return true;
+        }
+    }
+    record AcceptStatement() : Statement
+    {
+        public override bool Execute(Intepretor intepretor, Part part)
+        {
+            intepretor.Result = 1;
+            return true;
+        }
+    }
+    record RejectStatement() : Statement
+    {
+        public override bool Execute(Intepretor intepretor, Part part)
+        {
+            intepretor.Result = -1;
+            return true;
+        }
+    }
 
     string sample = """
                     px{a<2006:qkq,m>2090:A,rfg}
