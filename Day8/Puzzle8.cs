@@ -29,7 +29,7 @@ class Puzzle8 : IPuzzle
 
         Part2(instructions, directions);
     }
-    
+
     private static void Part1(char[] instructions, Dictionary<string, (string Left, string Right)> directions)
     {
         Part1(instructions, directions, "AAA", pos => pos == "ZZZ");
@@ -74,23 +74,9 @@ class Puzzle8 : IPuzzle
             System.Console.WriteLine($"{position} cycle len={cycle}");
         }
 
-        System.Console.WriteLine("GCD = {0}", cycles.Aggregate(GCD));
-        System.Console.WriteLine("Answer = LCM = {0}", cycles.Aggregate((x, y) => x * y / GCD(x, y)));
+        System.Console.WriteLine("GCD = {0}", cycles.Aggregate(Numerics.Gcd));
+        System.Console.WriteLine("Answer = LCM = {0}", cycles.Aggregate(Numerics.Lcm));
 
-    }
-
-
-    private static long GCD(long a, long b)
-    {
-        while (a != 0 && b != 0)
-        {
-            if (a > b)
-                a %= b;
-            else
-                b %= a;
-        }
-
-        return a | b;
     }
 
     string sample = """

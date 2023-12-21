@@ -16,13 +16,13 @@ class Puzzle18 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day18/input.txt");
-        //      lines = sample.Replace("\n", "").Split(['\r']);
+        //lines = sample.Replace("\n", "").Split(['\r']);
 
 
         List<DigPlan> plan = [];
         foreach (var line in lines)
         {
-            var match = Regex.Match(line, @"(\w) (\d+) (\(.*\))");
+            var match = Regex.Match(line, @"(\w) (\d+) \(#(.*)\)");
 
             var direction = match.Groups[1].Value switch
             {
@@ -36,9 +36,18 @@ class Puzzle18 : IPuzzle
             var amount = int.Parse(match.Groups[2].Value);
             var color = match.Groups[3].Value;
 
+
+            // Part 2
+
+            // amount = Convert.ToInt32(color.Substring(0, 5), 16);
+            // direction = (Direction)((1 + int.Parse(color.Substring(5, 1))) % 4);
+
             plan.Add(new DigPlan(direction, amount, color));
         }
 
+        var sf = plan.Where(s => s.Direction == Direction.East || s.Direction == Direction.West).Select(p => p.Amount).Aggregate(Numerics.Gcd);
+
+        System.Console.WriteLine(sf);
         foreach (var item in plan)
         {
             System.Console.WriteLine(item);
@@ -81,7 +90,8 @@ class Puzzle18 : IPuzzle
 
         //        var writer = System.Console.Out;
 
-        SaveAsPgm(grid, "day18/output.pgm");
+        var bmp = new PortableBitmap<int>(grid, WHITE, "Day 18 AOC");
+        bmp.SaveAsPgm("day18/output.pgm");
 
         int count = 0;
         for (int y = 0; y < grid.GetLength(1); y++)
@@ -94,30 +104,6 @@ class Puzzle18 : IPuzzle
 
 
         System.Console.WriteLine($"Answer ={count}");
-    }
-
-    private void SaveAsPgm(int[,] canvas, string fileName)
-    {
-        using var writer = File.CreateText(fileName);
-        writer.NewLine = "\n";
-
-        var height = canvas.GetLength(1);
-        var width = canvas.GetLength(0);
-
-        writer.WriteLine("P2");
-        writer.WriteLine("# Day 18 AoC");
-        writer.WriteLine($"{width} {height}");
-        writer.WriteLine(WHITE); // Maximum greyscale value
-        for (int r = 0; r < height; r++)
-        {
-            for (int c = 0; c < width; c++)
-            {
-                writer.Write(canvas[c, r]);
-                writer.Write(" ");
-            }
-            writer.WriteLine();
-        }
-
     }
 
     private void FloodFill(int[,] canvas, Point2D value, int color)

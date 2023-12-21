@@ -89,7 +89,8 @@ class Puzzle10 : IPuzzle
         var canvas = MakeCanvas(points);
         FloodFill(canvas, (0, 0));
 
-        SaveAsPgm(canvas, "Day10/output.pgm");
+        var bmp = new PortableBitmap<byte>(canvas, White, "AoC Day 10");
+        bmp.SaveAsPgm("Day10/output.pgm");
 
         var interoirCount = CountInterior(canvas);
         System.Console.WriteLine("Part 2 = {0}", interoirCount);
@@ -121,31 +122,6 @@ class Puzzle10 : IPuzzle
         }
         return interior;
     }
-
-    private void SaveAsPgm(byte[,] canvas, string fileName)
-    {
-        using var writer = File.CreateText(fileName);
-        writer.NewLine = "\n";
-
-        var height = canvas.GetLength(1);
-        var width = canvas.GetLength(0);
-
-        writer.WriteLine("P2");
-        writer.WriteLine("# Day 10 AoC");
-        writer.WriteLine($"{width} {height}");
-        writer.WriteLine(White); // Maximum greyscale value
-        for (int r = 0; r < height; r++)
-        {
-            for (int c = 0; c < width; c++)
-            {
-                writer.Write(canvas[c, r]);
-                writer.Write(" ");
-            }
-            writer.WriteLine();
-        }
-
-    }
-
 
     private byte[,] MakeCanvas(List<Point2D> points)
     {
