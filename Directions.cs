@@ -1,3 +1,5 @@
+using System.Numerics;
+using System.Reflection.PortableExecutable;
 using Point2D = (int x, int y);
 
 
@@ -21,6 +23,12 @@ static class Directions
     public static Point2D From(this Direction direction, Point2D p)
     {
         return (p.x + Deltas[direction].x, p.y + Deltas[direction].y);
+    }
+
+
+    public static Vector2d ToVector(this Point2D p)
+    {
+        return new Vector2d(p.x, p.y);
     }
 
     public static bool IsWithinBounds(this Point2D point, int rows, int cols)
