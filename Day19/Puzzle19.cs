@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 class Puzzle19 : IPuzzle
 {
 
+    const int NumParts = 4000;
+
     public void Excute()
     {
 
@@ -28,7 +30,95 @@ class Puzzle19 : IPuzzle
         var total = partsAccepted.Sum(s => s.A + s.M + s.S + s.X);
 
         System.Console.WriteLine($"Answer ={total}");
+
+
+        var all = new PartCombination(NumParts);
+
+        var combinator = new Combinator(workflows);
+        combinator.Execute(all, "in");
+
+
+        foreach (var item in combinator.Solutions)
+        {
+            System.Console.WriteLine("{0}: {1} {2} {3} {4}", item, item.X.Count, item.M.Count, item.A.Count, item.S.Count);
+        }
+
+        System.Console.WriteLine(combinator.Solutions.Sum(s => s.Total));
+
+        System.Console.WriteLine(167409079868000L);
     }
+
+
+    class Combinator
+    {
+        private Dictionary<string, Workflow> workflows;
+
+        internal Combinator(Dictionary<string, Workflow> workflows)
+        {
+            this.workflows = workflows;
+        }
+
+        public List<PartCombination> Solutions { get; } = new List<PartCombination>();
+
+        public void Execute(PartCombination set, string start)
+        {
+            set.Path.Add(start);
+            var next = workflows[start];
+            foreach (var flow in next.Rules)
+            {
+                flow.Follow(this, set);
+            }
+
+        }
+    }
+
+    class PartCombination
+    {
+        private readonly HashSet<int> x;
+        private readonly HashSet<int> m;
+        private readonly HashSet<int> a;
+        private readonly HashSet<int> s;
+
+        private readonly List<string> path;
+
+        public PartCombination(int max)
+            : this(Enumerable.Range(1, max), Enumerable.Range(1, max), Enumerable.Range(1, max), Enumerable.Range(1, max))
+        {
+        }
+
+        private PartCombination(IEnumerable<int> ints1, IEnumerable<int> ints2, IEnumerable<int> ints3, IEnumerable<int> ints4)
+        {
+            this.x = new HashSet<int>(ints1);
+            this.m = new HashSet<int>(ints2);
+            this.a = new HashSet<int>(ints3);
+            this.s = new HashSet<int>(ints4);
+            this.path = new List<string>();
+        }
+
+        public long Total { get { return (long)X.Count * M.Count * A.Count * S.Count; } }
+
+        public HashSet<int> X => x;
+
+        public HashSet<int> M => m;
+
+        public HashSet<int> A => a;
+
+        public HashSet<int> S => s;
+
+        public List<string> Path => path;
+
+        internal PartCombination Clone()
+        {
+            var z = new PartCombination(this.X, this.M, this.A, this.S);
+            z.Path.AddRange(this.Path);
+            return z;
+        }
+
+        public override string ToString()
+        {
+            return string.Join(" -> ", path);
+        }
+    };
 
     private (Dictionary<string, Workflow> workflows, List<Part> parts) ParseLines(string[] lines)
     {
@@ -140,10 +230,12 @@ class Puzzle19 : IPuzzle
     abstract record Statement()
     {
         public abstract bool Execute(Intepretor intepretor, Part part);
+        public abstract void Follow(Combinator combinator, PartCombination set);
     }
     abstract record Expression()
     {
         public abstract bool Evaluate(Part part);
+        internal abstract void Reduce(PartCombination set);
     }
 
     record ConditionalStatement(Expression predicate, Statement body) : Statement
@@ -156,6 +248,16 @@ class Puzzle19 : IPuzzle
                 return true;
             }
             return false;
+        }
+
+        public override void Follow(Combinator combinator, PartCombination set)
+        {
+            var clone = set.Clone();
+
+            predicate.Reduce(clone);
+            body.Follow(combinator, clone);
+
+            ((ConditionalExpression)predicate).ReduceElse(set);
         }
     }
     record ConditionalExpression(string variable, string op, int value) : Expression
@@ -178,6 +280,55 @@ class Puzzle19 : IPuzzle
                 _ => throw new NotImplementedException(),
             };
         }
+
+        internal override void Reduce(PartCombination part)
+        {
+            var accumulator = variable switch
+            {
+                "x" => part.X,
+                "m" => part.M,
+                "a" => part.A,
+                "s" => part.S,
+                _ => throw new NotImplementedException(),
+            };
+
+            switch (op)
+            {
+                case "<":
+                    accumulator.IntersectWith(Enumerable.Range(1, value - 1));
+                    break;
+                case ">":
+                    accumulator.IntersectWith(Enumerable.Range(value + 1, NumParts - value));
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+
+        internal void ReduceElse(PartCombination part)
+        {
+            var accumulator = variable switch
+            {
+                "x" => part.X,
+                "m" => part.M,
+                "a" => part.A,
+                "s" => part.S,
+                _ => throw new NotImplementedException(),
+            };
+
+            switch (op)
+            {
+                case "<":
+                    accumulator.IntersectWith(Enumerable.Range(value, NumParts - value + 1));
+                    break;
+                case ">":
+                    accumulator.IntersectWith(Enumerable.Range(1, value));
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
     }
 
     record GotoStatement(string Label) : Statement
@@ -187,6 +338,11 @@ class Puzzle19 : IPuzzle
             intepretor.NextFlow = Label;
             return true;
         }
+
+        public override void Follow(Combinator combinator, PartCombination set)
+        {
+            combinator.Execute(set, Label);
+        }
     }
     record AcceptStatement() : Statement
     {
@@ -195,6 +351,12 @@ class Puzzle19 : IPuzzle
             intepretor.Result = 1;
             return true;
         }
+
+        public override void Follow(Combinator combinator, PartCombination set)
+        {
+            set.Path.Add("A");
+            combinator.Solutions.Add(set);
+        }
     }
     record RejectStatement() : Statement
     {
@@ -202,6 +364,11 @@ class Puzzle19 : IPuzzle
         {
             intepretor.Result = -1;
             return true;
+        }
+
+        public override void Follow(Combinator combinator, PartCombination set)
+        {
+            // Empty
         }
     }
 
