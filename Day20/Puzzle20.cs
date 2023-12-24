@@ -1,4 +1,6 @@
 
+using System.Collections.Concurrent;
+
 class Puzzle20 : IPuzzle
 {
 
@@ -21,6 +23,9 @@ class Puzzle20 : IPuzzle
 
         Part1(modules);
 
+
+        Part2(modules,lines);
+
     }
 
     private static void Part1(Dictionary<string, Module> modules)
@@ -37,6 +42,51 @@ class Puzzle20 : IPuzzle
 
         System.Console.WriteLine($"Answer ={total}  = {highCount} * {lowCount}");
         System.Console.WriteLine(11687500);
+    }
+
+
+    private static void Part2(Dictionary<string, Module> modules, string[] lines)
+    {
+        List<long> counts = [];
+        // RX Module has one input "bq"
+        // bq is a conjunction with 4 inputs
+        // find the count for each of bq's inputs and 
+        // take the Least Common Multiple of these counts.
+
+        var conMod = (ConjunctionModule)modules["bq"];
+        foreach (var m in conMod.Inputs)
+        {
+            modules = ParseLines(lines);
+            ConnectInputModules(modules);
+
+            int item = CountUntilEnd(modules, m);
+            counts.Add(item);
+
+            System.Console.WriteLine($"{m} {item}");
+        }
+
+        long i = counts.Aggregate(Numerics.Lcm);
+
+        System.Console.WriteLine($"Answer = {i}");
+
+    }
+
+    private static int CountUntilEnd(Dictionary<string, Module> modules, string endModule)
+    {
+
+        bool done = false;
+        long highCount = 0;
+        long lowCount = 0;
+
+        modules[endModule] = new RxModule(endModule, () => { done = true; });
+        int i = 0;
+        while (!done)
+        {
+            i++;
+            ButtonPress(modules, ref highCount, ref lowCount, false);
+        }
+
+        return i;
     }
 
     private static void ButtonPress(Dictionary<string, Module> modules, ref long highCount, ref long lowCount, bool debug)
@@ -167,6 +217,7 @@ class Puzzle20 : IPuzzle
 
         private Dictionary<string, Pulse> inputs = new Dictionary<string, Pulse>();
 
+        public IEnumerable<string> Inputs => inputs.Keys;
         public void AddInput(string name)
         {
             inputs.TryAdd(name, Pulse.Low);
@@ -228,6 +279,23 @@ class Puzzle20 : IPuzzle
         {
             value = pulse;
             return true;
+        }
+    }
+
+    record RxModule(string Name, Action done) : Module(Name, [])
+    {
+        public override Pulse Receive()
+        {
+            return Pulse.NotSet;
+        }
+
+        public override bool SetState(string input, Pulse value)
+        {
+            if (value == Pulse.Low)
+            {
+                done();
+            }
+            return false;
         }
     }
 
