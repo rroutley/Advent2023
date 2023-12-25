@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.Data;
-using System.Runtime.CompilerServices;
 using Point2d = (int x, int y);
 
 class Puzzle21 : IPuzzle
@@ -17,7 +14,7 @@ class Puzzle21 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day21/input.txt");
-        //   lines = sample.Replace("\n", "").Split(['\r']);
+       // lines = sample.Replace("\n", "").Split(['\r']);
 
         rows = lines.Length;
         cols = lines[0].Length;
@@ -26,6 +23,16 @@ class Puzzle21 : IPuzzle
 
         System.Console.WriteLine(start);
 
+        //Part1(start, grid);
+
+        Part2(start, grid, 1000);
+
+        long s = 26501365;
+        System.Console.WriteLine($"Answer = {(s + 1) * (s + 1)}");
+    }
+
+    private void Part1(Point2d start, byte[,] grid)
+    {
         List<Point2d> spots = [start];
 
         for (int s = 0; s < 64; s++)
@@ -59,15 +66,58 @@ class Puzzle21 : IPuzzle
             //            Dump(grid, spots, System.Console.Out);
         }
 
-
-
-
         var total = spots.Count();
 
         System.Console.WriteLine($"Answer ={total}");
     }
 
 
+    private void Part2(Point2d start, byte[,] grid, int stepCount)
+    {
+        List<Point2d> spots = [start];
+        using var writer = File.CreateText("day21/output.csv");
+        for (int s = 0; s < stepCount; s++)
+        {
+            HashSet<Point2d> nextSpots = [];
+            foreach (var spot in spots)
+            {
+                for (int d = 0; d < 4; d++)
+                {
+                    var direction = (Direction)d;
+                    var next = Directions.From(direction, spot);
+                    if (nextSpots.Contains(next))
+                    {
+                        continue;
+                    }
+
+                    var (x, y) = next;
+                    x %= cols;
+                    if (x < 0) x += cols;
+                    y %= rows;
+                    if (y < 0) y += rows;
+
+                    if (grid[x, y] == Rock)
+                    {
+                        continue;
+                    }
+
+
+                    nextSpots.Add(next);
+                }
+            }
+
+            spots = [.. nextSpots];
+
+     //       Dump(grid, spots, System.Console.Out);
+
+
+            writer.WriteLine($"{s + 1},{spots.Count}");
+        }
+
+        var total = spots.Count();
+
+        System.Console.WriteLine($"Answer ={total}");
+    }
 
 
     private void Dump(byte[,] grid, IEnumerable<Point2d> path, TextWriter writer)
