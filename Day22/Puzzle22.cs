@@ -1,5 +1,5 @@
-using System.Drawing;
-using System.Security.Cryptography.X509Certificates;
+using System.ComponentModel.DataAnnotations;
+using System.IO.Compression;
 using Point3d = (int x, int y, int z);
 
 class Puzzle22 : IPuzzle
@@ -9,51 +9,142 @@ class Puzzle22 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day22/input.txt");
-        lines = sample.Replace("\n", "").Split(['\r']);
+        //lines = sample.Replace("\n", "").Split(['\r']);
 
         List<Brick> bricks = [];
 
+        int b = 0;
         foreach (var line in lines)
         {
-            var (s, e) = line.Split('~', 2);
-
-            var brick = new Brick(Parse(s), Parse(e));
+            var brick = Brick.Parse(line, ++b);
             bricks.Add(brick);
-
         }
 
-        var maxX = bricks.Max(b => Math.Max(b.start.x, b.end.x)) + 1;
-        var maxY = bricks.Max(b => Math.Max(b.start.y, b.end.y)) + 1;
-        var maxZ = bricks.Max(b => Math.Max(b.start.z, b.end.z)) + 1;
+        bricks.Sort(new BrickHeightComparer());
+
+        var maxX = bricks.Max(b => Math.Max(b.Start.x, b.End.x)) + 1;
+        var maxY = bricks.Max(b => Math.Max(b.Start.y, b.End.y)) + 1;
+        var maxZ = bricks.Max(b => Math.Max(b.Start.z, b.End.z)) + 1;
         Point3d dim = (maxX, maxY, maxZ);
 
         System.Console.WriteLine(dim);
 
-        bricks = Drop(bricks, dim);
+        bricks = DropAll(bricks, dim);
+        maxZ = bricks.Max(b => Math.Max(b.Start.z, b.End.z)) + 2;
+        dim = (maxX, maxY, maxZ);
 
         int[,,] space = Map(bricks, dim);
 
         Dump(dim, space);
 
-        var total = lines.Count();
+        foreach (var brick in bricks)
+        {
+            var supports = Supports(space, dim, brick, bricks);
+            brick.Supports = supports;
+
+            var supportedBy = SupportedBy(space, dim, brick, bricks);
+            brick.SupportedBy = supportedBy;
+
+            if (!supportedBy.Any() && brick.Start.z != 1)
+            {
+                throw new NotImplementedException();
+            }
+
+            // System.Console.WriteLine($"{brick} Supports {string.Join(", ", supports.Select(s => s.ToString()))}");
+            // System.Console.WriteLine($"{brick} Supported By {string.Join(", ", supportedBy.Select(s => s.ToString()))}");
+        }
+
+        var total = 0;
+        foreach (var brick in bricks)
+        {
+            var canDisintegrate = CanDisintegrate(brick);
+
+            if (canDisintegrate) total++;
+            //            System.Console.WriteLine($"{brick} Can Be Disintgrated {canDisintegrate}");
+        }
 
         System.Console.WriteLine($"Answer ={total}");
     }
 
-    private static int[,,] Map(List<Brick> bricks, (int x, int y, int z) dim)
+    private bool CanDisintegrate(Brick brick)
+    {
+        var supporting = brick.Supports;
+
+        if (!supporting.Any())
+        {
+            return true;
+        }
+
+        var otherSupports = from s in supporting
+                            from k in s.SupportedBy
+                            where k != brick
+                            select k;
+
+        if (otherSupports.Any())
+        {
+            return true;
+        }
+
+        return false;
+    }
+    private IEnumerable<Brick> Supports(int[,,] space, Point3d dim, Brick brick, List<Brick> bricks)
+    {
+        var maxZ = Math.Max(brick.Start.z, brick.End.z);
+
+        HashSet<Brick> supports = [];
+        for (int x = brick.Start.x; x <= brick.End.x; x++)
+        {
+            for (int y = brick.Start.y; y <= brick.End.y; y++)
+            {
+                int z = maxZ + 1;
+                int number = space[x, y, z];
+                if (number != 0)
+                {
+                    Brick item = bricks.Single(b => b.Number == number);
+                    if (item.Number != number) throw new InvalidOperationException();
+
+                    supports.Add(item);
+                };
+            }
+        }
+        return supports;
+    }
+    private IEnumerable<Brick> SupportedBy(int[,,] space, Point3d dim, Brick brick, List<Brick> bricks)
+    {
+        var minZ = Math.Min(brick.Start.z, brick.End.z);
+
+        HashSet<Brick> supportedBy = [];
+        for (int x = brick.Start.x; x <= brick.End.x; x++)
+        {
+            for (int y = brick.Start.y; y <= brick.End.y; y++)
+            {
+                int z = minZ - 1;
+                int number = space[x, y, z];
+                if (number != 0)
+                {
+                    Brick item = bricks.Single(b => b.Number == number);
+                    if (item.Number != number) throw new InvalidOperationException();
+
+                    supportedBy.Add(item);
+                };
+            }
+        }
+        return supportedBy;
+    }
+
+    private static int[,,] Map(List<Brick> bricks, Point3d dim)
     {
         var space = new int[dim.x, dim.y, dim.z];
 
-        for (int i = 0; i < bricks.Count; i++)
+        foreach (Brick brick in bricks)
         {
-            Brick brick = bricks[i];
-            for (int x = brick.start.x; x <= brick.end.x; x++)
+            for (int x = brick.Start.x; x <= brick.End.x; x++)
             {
-                for (int y = brick.start.y; y <= brick.end.y; y++)
+                for (int y = brick.Start.y; y <= brick.End.y; y++)
                 {
-                    for (int z = brick.start.z; z <= brick.end.z; z++)
+                    for (int z = brick.Start.z; z <= brick.End.z; z++)
                     {
-                        space[x, y, z] = i + 1;
+                        space[x, y, z] = brick.Number;
                     }
                 }
             }
@@ -67,7 +158,7 @@ class Puzzle22 : IPuzzle
         System.Console.WriteLine("  x");
         for (int z = dim.z - 1; z >= 0; z--)
         {
-            for (int x = 0; x < dim.y; x++)
+            for (int x = 0; x < dim.x; x++)
             {
                 int y = 0;
                 char value = '.';
@@ -107,16 +198,16 @@ class Puzzle22 : IPuzzle
         }
     }
 
-    private static List<Brick> Drop(List<Brick> bricks, (int x, int y, int z) dim)
+    private static List<Brick> DropAll(List<Brick> bricks, Point3d dim)
     {
         var heights = new int[dim.x, dim.y];
         var droppedbricks = new List<Brick>();
         foreach (var brick in bricks)
         {
             var z = 0;
-            for (int x = brick.start.x; x <= brick.end.x; x++)
+            for (int x = brick.Start.x; x <= brick.End.x; x++)
             {
-                for (int y = brick.start.y; y <= brick.end.y; y++)
+                for (int y = brick.Start.y; y <= brick.End.y; y++)
                 {
                     if (heights[x, y] > z)
                     {
@@ -129,11 +220,11 @@ class Puzzle22 : IPuzzle
             var dropped = brick.DropTo(z);
             droppedbricks.Add(dropped);
 
-            for (int x = brick.start.x; x <= brick.end.x; x++)
+            for (int x = brick.Start.x; x <= brick.End.x; x++)
             {
-                for (int y = brick.start.y; y <= brick.end.y; y++)
+                for (int y = brick.Start.y; y <= brick.End.y; y++)
                 {
-                    heights[x, y] = z;
+                    heights[x, y] = dropped.End.z;
                 }
             }
         }
@@ -141,19 +232,55 @@ class Puzzle22 : IPuzzle
         return droppedbricks;
     }
 
-    record Brick(Point3d start, Point3d end)
+    record Brick(int Number, Point3d Start, Point3d End)
     {
+
+        public static Brick Parse(string line, int number)
+        {
+            var (s, e) = line.Split('~', 2);
+
+            Point3d start = Parse(s);
+            Point3d end = Parse(e);
+
+            if (end.x < start.x || end.y < start.y || end.z < start.z)
+            {
+                throw new NotImplementedException();
+            }
+
+            return new Brick(number, start, end);
+
+            static Point3d Parse(string s)
+            {
+                var (x, y, z) = s.Split(',', 3).Select(int.Parse).ToArray();
+                return (x, y, z);
+            }
+
+        }
+        public IEnumerable<Brick> Supports { get; internal set; }
+        public IEnumerable<Brick> SupportedBy { get; internal set; }
+
         internal Brick DropTo(int z)
         {
-            return new Brick((start.x, start.y, z), (end.x, end.y, z + end.z - start.z));
+            if (z < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(z));
+            }
 
+            return new Brick(Number, (Start.x, Start.y, z), (End.x, End.y, z + End.z - Start.z));
+        }
+
+        public override string ToString()
+        {
+            return ((char)(Number + 64)).ToString();
         }
     }
 
-    private Point3d Parse(string s)
+    internal class BrickHeightComparer : IComparer<Brick>
     {
-        var (x, y, z) = s.Split(',', 3).Select(int.Parse).ToArray();
-        return (x, y, z);
+        int IComparer<Brick>.Compare(Brick lhs, Brick rhs)
+        {
+            return lhs.Start.z.CompareTo(rhs.Start.z);
+        }
     }
 
     string sample = """
@@ -166,3 +293,4 @@ class Puzzle22 : IPuzzle
                     1,1,8~1,1,9
                     """;
 }
+
