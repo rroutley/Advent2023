@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.IO.Compression;
 using Point3d = (int x, int y, int z);
 
 class Puzzle22 : IPuzzle
@@ -9,7 +7,7 @@ class Puzzle22 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day22/input.txt");
-        //lines = sample.Replace("\n", "").Split(['\r']);
+        lines = sample.Replace("\n", "").Split(['\r']);
 
         List<Brick> bricks = [];
 
@@ -27,11 +25,12 @@ class Puzzle22 : IPuzzle
         var maxZ = bricks.Max(b => Math.Max(b.Start.z, b.End.z)) + 1;
         Point3d dim = (maxX, maxY, maxZ);
 
-        System.Console.WriteLine(dim);
-
         bricks = DropAll(bricks, dim);
+
         maxZ = bricks.Max(b => Math.Max(b.Start.z, b.End.z)) + 2;
         dim = (maxX, maxY, maxZ);
+        System.Console.WriteLine(dim);
+
 
         int[,,] space = Map(bricks, dim);
 
@@ -87,6 +86,8 @@ class Puzzle22 : IPuzzle
 
         return false;
     }
+
+
     private IEnumerable<Brick> Supports(int[,,] space, Point3d dim, Brick brick, List<Brick> bricks)
     {
         var maxZ = Math.Max(brick.Start.z, brick.End.z);
@@ -109,6 +110,8 @@ class Puzzle22 : IPuzzle
         }
         return supports;
     }
+
+
     private IEnumerable<Brick> SupportedBy(int[,,] space, Point3d dim, Brick brick, List<Brick> bricks)
     {
         var minZ = Math.Min(brick.Start.z, brick.End.z);
@@ -144,6 +147,11 @@ class Puzzle22 : IPuzzle
                 {
                     for (int z = brick.Start.z; z <= brick.End.z; z++)
                     {
+                        if (space[x, y, z] != 0)
+                        {
+                            throw new InvalidOperationException();
+                        }
+
                         space[x, y, z] = brick.Number;
                     }
                 }
