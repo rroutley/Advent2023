@@ -7,45 +7,24 @@ class Puzzle23 : IPuzzle
     {
 
         var lines = File.ReadAllLines("Day23/input.txt");
-        //    lines = sample.Replace("\n", "").Split(['\r']);
+        //lines = sample.Replace("\n", "").Split(['\r']);
 
         rows = lines.Length;
         cols = lines[0].Length;
 
-        var grid = new char[cols, rows];
-        Point2d start = (0, 0);
-        Point2d end = (0, 0);
-        for (int r = 0; r < rows; r++)
-        {
-            for (int c = 0; c < cols; c++)
-            {
-                if (r == 0 && lines[r][c] == '.')
-                {
-                    start = (c, r);
-                }
-                if (r == rows - 1 && lines[r][c] == '.')
-                {
-                    end = (c, r);
-                }
 
-                grid[c, r] = lines[r][c];
-            }
-        }
-
+        (int x, int y) start, end;
+        char[,] grid = ParseLines(lines, out start, out end);
 
         Dump(grid, [], System.Console.Out);
         System.Console.WriteLine($"{start} to {end}");
 
 
-        Dictionary<Point2d, int> distances = new Dictionary<Point2d, int>
-        {
-            [start] = 0
-        };
-
-        Heap<(Point2d, HashSet<Point2d>)> queue = new(Heap<Point2d>.MaxHeap);
-        Dictionary<Point2d, Point2d> path = [];
+        Heap<(Point2d, SortedSet<Point2d>)> queue = new(Heap<Point2d>.MaxHeap);
 
         queue.Enqueue((start, []), 0);
+
+        var bestPath = new SortedSet<Point2d>();
 
         while (queue.Count > 0)
         {
@@ -53,8 +32,14 @@ class Puzzle23 : IPuzzle
 
             if (spot == end)
             {
-                System.Console.WriteLine($"At End  {distances[spot]}");
+                System.Console.WriteLine($"At End  {history.Count}");
+                if (history.Count > bestPath.Count)
+                {
+                    bestPath = history;
+                    continue;
+                }
             }
+
 
             history.Add(spot);
 
@@ -88,30 +73,51 @@ class Puzzle23 : IPuzzle
                     _ => throw new NotImplementedException(),
                 };
 
-                if (!canMove)
-                {
-                    continue;
-                }
+                // if (!canMove)
+                // {
+                //     continue;
+                // }
 
-                if (!distances.ContainsKey(next) || distances[next] < distances[spot] + 1)
-                {
-                    distances[next] = distances[spot] + 1;
-                    queue.Enqueue((next, [.. history]), distances[next]);
-                    path[next] = spot;
-                }
+                int s = history.Count;
+
+                queue.Enqueue((next, [.. history]), s);
+
             }
         }
 
 
-        var route = ReconstructPath(path, end);
+        //var route = ReconstructPath(path, end);
 
-        Dump(grid, route, System.Console.Out);
+        Dump(grid, bestPath, System.Console.Out);
 
-        var total = distances[end];
+        var total = bestPath.Count;
 
         System.Console.WriteLine($"Answer ={total}");
     }
 
+    private char[,] ParseLines(string[] lines, out (int x, int y) start, out (int x, int y) end)
+    {
+        var grid = new char[cols, rows];
+        start = (0, 0);
+        end = (0, 0);
+        for (int r = 0; r < rows; r++)
+        {
+            for (int c = 0; c < cols; c++)
+            {
+                if (r == 0 && lines[r][c] == '.')
+                {
+                    start = (c, r);
+                }
+                if (r == rows - 1 && lines[r][c] == '.')
+                {
+                    end = (c, r);
+                }
+
+                grid[c, r] = lines[r][c];
+            }
+        }
+        return grid;
+    }
 
     private IEnumerable<Point2d> ReconstructPath(Dictionary<Point2d, Point2d> cameFrom, Point2d current)
     {
