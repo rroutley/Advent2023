@@ -60,10 +60,18 @@ class Puzzle24 : IPuzzle
             }
         }
 
+    }
+
+    private static void Part2(List<Hailstone> hailstones)
+    {
+        // given there is a line that passes through all 
+        // pick 3 hailstones and fild the line that intesects with all 3.
+
+        var h1 = hailstones[0];
+        var h2 = hailstones[1];
+        var h3 = hailstones[2];
 
 
-
-        System.Console.WriteLine($"Answer ={total}");
     }
 
     record Hailstone(Vector3d Position, Vector3d Velocity);
